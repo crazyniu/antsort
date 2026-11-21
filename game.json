@@ -1,0 +1,112 @@
+{
+  "_comment": "游戏的身份信息（docs/10-开发底座.md 第 3 节）。做新游戏第一步改这里，然后 ./run.sh native-apply。打包前 tools/native/apply.mjs 按它改写各平台的构建配置和原生工程。下面带 TODO 的要换成自己的",
+  "codeName": "mygame",
+  "name": {
+    "en": "My Game",
+    "zh_CN": "我的游戏",
+    "zh_TW": "我的遊戲",
+    "ja": "マイゲーム",
+    "ko": "마이 게임",
+    "de": "My Game",
+    "fr": "My Game",
+    "es": "My Game",
+    "pt": "My Game",
+    "it": "My Game",
+    "ru": "My Game",
+    "tr": "My Game"
+  },
+  "languages": {
+    "_comment": "各端带哪些语言；第一个是认不出系统语言时的默认语言。加语言见 docs/10 第 8 节",
+    "app": [
+      "en",
+      "zh_CN",
+      "zh_TW",
+      "ja",
+      "ko",
+      "de",
+      "fr",
+      "es",
+      "pt",
+      "it",
+      "ru",
+      "tr"
+    ],
+    "wechat": [
+      "zh_CN",
+      "en"
+    ]
+  },
+  "version": "1.0.0",
+  "build": 1,
+  "ios": {
+    "bundleId": "com.example.mygame",
+    "build": 1,
+    "team": "",
+    "_teamComment": "TODO：Apple 开发者账号的 Team ID（Xcode → Settings → Accounts 能看到），不填打不了真机包和 IPA",
+    "minVersion": "15.0",
+    "admobAppId": "ca-app-pub-3940256099942544~1458002511",
+    "_admobComment": "TODO：上架前换成 AdMob 后台建的 iOS 应用 ID（现在是 Google 官方的示例应用 ID）",
+    "trackingText": {
+      "en": "This lets us show you ads that are more relevant to you.",
+      "zh_CN": "用来给你推荐更相关的广告。",
+      "zh_TW": "用來為你推薦更相關的廣告。",
+      "ja": "あなたの興味に合った広告を表示するために使います。",
+      "ko": "관심사에 더 잘 맞는 광고를 보여 드리는 데 사용됩니다.",
+      "de": "Damit zeigen wir dir Werbung, die besser zu dir passt.",
+      "fr": "Cela nous permet de vous montrer des publicités plus pertinentes.",
+      "es": "Así podemos mostrarte anuncios más relevantes para ti.",
+      "pt": "Assim podemos mostrar anúncios mais relevantes para você.",
+      "it": "Così possiamo mostrarti annunci più adatti a te.",
+      "ru": "Так мы сможем показывать вам более подходящую рекламу.",
+      "tr": "Böylece sana daha ilgi çekici reklamlar gösterebiliriz."
+    }
+  },
+  "android": {
+    "packageName": "com.example.mygame",
+    "minSdk": 24,
+    "targetSdk": 36,
+    "admobAppId": "ca-app-pub-3940256099942544~3347511713",
+    "_admobComment": "TODO：上架前换成 AdMob 后台建的 Android 应用 ID（现在是 Google 官方的示例应用 ID）"
+  },
+  "wechat": {
+    "_comment": "TODO：appid 是微信小游戏后台的 AppID；cloudEnv 是云开发环境 ID；remoteUrl 是静态网站托管的域名（资源放网上，安装包只能 4 MB）。都空着时资源留在包里，只能在开发者工具的模拟器里跑（docs/10 第 4 节）",
+    "appid": "",
+    "cloudEnv": "",
+    "remoteUrl": ""
+  },
+  "privacyPolicy": "",
+  "_privacyPolicyComment": "TODO：隐私政策网页地址：商店后台填的也是这个，App 设置里的「隐私政策」打开它（苹果、Google Play 都要求 App 内能打开）",
+  "levelLab": true,
+  "_levelLabComment": "难度调试页：只在开发版出现（编辑器预览、./run.sh 的调试构建），打包的版本自动不出；写 false 连开发版也不出",
+  "ads": {
+    "_comment": "enabled：广告总开关。false = 三端都没有广告：看广告的入口全部隐藏，iOS / Android 不把广告 SDK 打进包。ios / android 是 AdMob 后台建的真实广告位，只有上架包（IPA、AAB）用；其它包用 test 里 Google 官方的测试广告位。现在 ios / android 填的也是测试 ID——TODO：上架前换成自己的。微信只用微信官方的流量主广告位，空着 = 没有广告",
+    "enabled": true,
+    "ios": {
+      "rewarded": "ca-app-pub-3940256099942544/1712485313",
+      "interstitial": "ca-app-pub-3940256099942544/4411468910",
+      "banner": "ca-app-pub-3940256099942544/2934735716"
+    },
+    "android": {
+      "rewarded": "ca-app-pub-3940256099942544/5224354917",
+      "interstitial": "ca-app-pub-3940256099942544/1033173712",
+      "banner": "ca-app-pub-3940256099942544/6300978111"
+    },
+    "test": {
+      "ios": {
+        "rewarded": "ca-app-pub-3940256099942544/1712485313",
+        "interstitial": "ca-app-pub-3940256099942544/4411468910",
+        "banner": "ca-app-pub-3940256099942544/2934735716"
+      },
+      "android": {
+        "rewarded": "ca-app-pub-3940256099942544/5224354917",
+        "interstitial": "ca-app-pub-3940256099942544/1033173712",
+        "banner": "ca-app-pub-3940256099942544/6300978111"
+      }
+    },
+    "wechat": {
+      "rewarded": "",
+      "interstitial": "",
+      "banner": ""
+    }
+  }
+}

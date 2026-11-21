@@ -1,0 +1,90 @@
+# 游戏开发底座（game-scaffold）
+
+> 这是所有新游戏的起点。**做新游戏时先读 `docs/00-新游戏开工清单.md`**，按它的步骤走；开新仓库后把这一节改成新游戏的名字和一句话玩法（`docs/00` 第 1 步）。
+>
+> - 游戏名：TODO（底座的示例：三消取块）
+> - 代号：`game.json` 的 `codeName`（底座是 `mygame`）
+> - 一句话玩法：TODO
+
+竖屏休闲手游。一个仓库、一个主干出三端：**微信小游戏**（中国大陆）、**Google Play** 和 **iOS**（只上海外）。界面、外围系统、平台层、打包、文档都已定版，新游戏照用，只换玩法、美术、数值和文案。
+
+## 文档索引（动手前先读对应文档）
+
+| 文档 | 内容 |
+|---|---|
+| `docs/00-新游戏开工清单.md` | **做新游戏的步骤**：开仓库、改身份、换玩法、调数值、美术、文案、试玩、上架；底座里要换的占位图清单 |
+| `docs/01-玩法与外围系统.md` | 新游戏的玩法写在前三节（模板）；后面是底座自带的外围系统：金币、生命、技能、星级、宝箱、签到、任务、转盘、收藏、每日挑战、连击、关卡类型、广告位 |
+| `docs/02-玩法接入与关卡.md` | 示例玩法由哪几个文件组成、换成新玩法要遵守的接口和步骤、关卡可解、难度怎么量 |
+| `docs/03-美术规范.md` | 原创要求、资源规格、Codex 出图流程、清晰度 |
+| `docs/04-技术架构.md` | 目录、分层、启动流程、平台层、存档、包体与加载 |
+| `docs/05-开发规范.md` | 代码、测试、CI、Git、性能、完成标准、Linux 开发机和 Mac 测试机的分工 |
+| `docs/06-平台发布.md` | 三端资质、包体、合规、提审前检查 |
+| `docs/07-里程碑.md` | 新游戏的开发顺序和验收（模板） |
+| `docs/08-界面规格流程.md` | 新界面先写规格、后写代码；审查清单 |
+| `docs/09-界面设计系统.md` | **界面定版**：配色、字体、部件（`ui/kit.ts`）、外壳、主页 / 商城 / 地图 / 选关 / 任务 / 每日挑战 / 转盘 / 收藏 / 局内 / 结算 / 设置 / 弹窗的版式 |
+| `docs/10-开发底座.md` | 底座和游戏内容的分界、三端打包、`game.json`、广告开关、多语言、难度调试页 |
+
+文档是唯一事实来源：改规则或数值时，先改文档再改代码，同一次提交里完成。
+
+## 分工
+
+- **AI（Claude）**：全部代码、配置表、关卡工具、文档；写出图需求。
+- **Codex**：全部位图美术（角色、卡面、图标、场景、上架图）。AI 在 `art/briefs/` 写需求，Codex 产出到 `art/raw/`（流程 `docs/03` 第 5 节）。
+- **用户**：玩法和美术方向、界面验收、平台账号与资质、上架提交。
+
+## 硬性约束
+
+1. **原创**：只借鉴品类玩法。名称、角色、图标、界面画面、场景一律原创，不照任何现有游戏的截图做、不拿它们当 Codex 的参考图。
+2. **引擎**：Cocos Creator 3.8.8 + TypeScript 严格模式，工程在 `client/`。界面全部由代码生成（`ui/kit.ts`），不拖 prefab。
+3. **分层**：`client/assets/scripts/core/` 是纯逻辑：不 import `cc`，不碰节点、存储、时间、`Math.random`（时间由调用方传入，随机用传入种子的 `Rng`）。依赖只能向下：`pages / game → ui → services → core`，`services → platform`。
+4. **平台隔离**：`wx`、原生桥等平台调用只允许出现在 `client/assets/scripts/platform/`；其它代码走 `App.platform`，按能力（`hasCapability`）而不是按平台 id 分支。
+5. **数值不进代码**：关卡、经济、广告频控、界面手感全部放 `client/assets/resources/config/` 的 JSON。
+6. **文案不进代码**：玩家可见的文字都走 `tr('KEY')`；翻译在 `i18n/strings.csv`（每种语言一列），`node client/tools/i18n.mjs` 生成 `strings.json`；改了文案跑 `./run.sh font-subset`。
+7. **关卡必须可解**：进包的关卡都要过 `./run.sh level-verify`。
+8. **无自建服务器**：存档本地 + 平台云存档，排行榜用平台能力。
+9. **广告**：上架的版本有广告；不做内购。总开关 `game.json` 的 `ads.enabled`。iOS、Android 接 AdMob（真实广告位只有上架包 IPA、AAB 用，其它包用 Google 测试广告位）；微信只用微信官方的流量主。界面按 `hasCapability('ads')` 决定入口在不在、按 `adsAvailable()` 决定能不能点。金币按「不看广告不够用，看广告加倍」设计。
+10. **语言**：App 带 12 种（英、简中、繁中、日、韩、德、法、西、葡（巴西）、意、俄、土耳其），微信带简中和英文，见 `game.json` 的 `languages`。按系统语言选默认，设置里可换。**每种语言按当地休闲游戏的说法写，不直译**；字号不缩，放不下就改短（`docs/10` 第 8 节）。
+11. **界面不重新设计**：主页、商城、地图、局内、设置等的版式和组件照 `docs/09` 做，只换主题色、插画和文案；要改版式先问用户。
+12. **测试与 CI 从简**：只给 `core/` 的规则、关卡生成、外围系统和配置对齐写测试（`client/tests/`）；界面、服务、平台层不写单测。CI 只有一条 PR 流水线，三分钟内（`docs/05` 第 3、4 节），不加构建矩阵、覆盖率、界面自动化。
+13. **包体**：界面能用代码画的就不用图片；进包的 PNG 一律压成 256 色调色板（`./run.sh art-compress`，`check` 会查）。
+14. **三端一个仓库、一个主干**：不为平台开分支、不复制工程；平台差异只放 `platform/`、`client/native/engine/`、`game.json`（`docs/10` 第 1 节）。
+
+## 开发流程
+
+玩法先写进 `docs/01`、经用户确认 → 写纯逻辑和测试 → 接局内外壳 → 数值（先讲方案）→ 美术 → 文案 → 在 Mac 上试玩、截图审查 → 用户验收 → 打包上架。新界面先写 `docs/ux/` 规格（`docs/08`）。
+
+大改（难度、经济、核心规则）自己想清楚并核对合理，讲给用户，用户确认后才动手；关卡生成、校验、工具这类实现细节自己定、直接做。
+
+## 常用命令
+
+```bash
+# Mac 上（需要 Cocos Creator 3.8.8）
+./run.sh                       # 拉最新代码 → 构建网页版 → 起本地服务 → 用独立 Chrome 窗口打开（试玩模式：金币、生命、技能加满，所有关都能点开）
+./run.sh level 12              # 同上，直接进第 12 关
+./run.sh auto [起] [止]        # 机器人代打：过关自动下一关、输了重打
+./run.sh page shop             # 启动后直接打开某一页（shop、map、levels、tasks、daily、wheel、collect、lab…）
+./run.sh real                  # 按真实存档进度（可与上面连用：./run.sh real level 3）
+./run.sh serve                 # 不重新构建，打开上次的构建（后面同样可跟参数）
+./run.sh lan                   # 构建后服务开在内网，打印 http://<内网 IP>:8080/ 给手机和别的电脑测
+./run.sh editor                # 打开 Cocos Creator
+./run.sh cdp logs | eval '<表达式>' | shot <文件> | burst <目录> <张数> <间隔毫秒> | watch   # 读控制台、求值、截图、连拍、盯卡死
+./package.sh                   # 打包：1 微信小游戏 · 2 iOS（Xcode 工程 / 模拟器 / 真机 / IPA / 装到手机 / 上传）· 3 Android（APK / AAB / 工程）· 4 网页版（docs/10 第 4 节）
+
+# Linux 上也能跑（Node 22+）
+./run.sh check                 # 类型检查 + .meta / 图片压缩 / 存档前缀检查 + 单测（和 CI 相同）
+./run.sh test                  # 只跑单测
+./run.sh level-verify          # 全部关卡按参考解能过
+./run.sh eco-sim               # 金币的账：一天挣多少、花多少、看几次广告（--no-ads、--win=0.5 …）
+./run.sh native-apply          # 按 game.json 改写各平台构建配置和原生工程（打包时自动跑）
+./run.sh native-icons          # 从 art/approved/logo/logo_1024.png 生成各平台应用图标、iOS 启动屏
+./run.sh meta                  # 给新资源补 .meta（结果要提交）
+./run.sh art-compress          # PNG 量化、背景音乐转 mp3
+./run.sh font-subset           # 按文案重新裁字体（要原字体，见 client/tools/font_subset.py）
+node client/tools/i18n.mjs     # strings.csv → strings.json
+```
+
+## 测试环境分工
+
+- **Linux 开发机只写代码**：构建、试玩、截图、界面验收、打包一律去 Mac 上做（Node 的检查、单测、关卡校验、金币模拟在 Linux 上跑）。用户的 Mac 是 Orca 环境 `Mac-Image-Worker`，AI 用 `orca` CLI 驱动，不需要用户手动操作（`docs/05` 第 9 节）。
+- **代码同步只走 git**：Linux 上提交并推送，Mac 上 `git checkout -- client && git pull --ff-only`（`./run.sh` 会自动做）。Mac 上除 git 同步、`./run.sh`、`./package.sh` 外不改文件、不装软件、不碰别的项目。
+- **交给用户测试**：Mac 上 `./run.sh lan`，把打印的内网地址发给用户；服务留着，用户说测完再关。测完关掉自己开的终端和试玩进程。

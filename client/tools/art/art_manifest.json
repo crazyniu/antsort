@@ -1,0 +1,13 @@
+{
+ "_comment": "输出路径（相对 resources，不带扩展名）: [来源（raw: 开头 = art/raw 下的相对路径，否则相对仓库根）, 显示宽（设计单位，按 3 倍缩放）, png | jpg]。键名去掉 _example_ 前缀才会处理",
+ "_example_ui/bg/home": [
+  "raw:<批次>/home.png",
+  750,
+  "jpg"
+ ],
+ "_example_card/c01": [
+  "raw:<批次>/c01.png",
+  120,
+  "png"
+ ]
+}

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:installLocation="auto">
+
+    <!-- Wi-Fi 权限和竖屏会让 Google Play 推断设备必须有 Wi-Fi、竖屏，没有的平板、Chromebook 就装不了；游戏没有它们也能玩，标成非必需
+         （竖屏方向照样由 Activity 的 screenOrientation 定） -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false"/>
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false"/>
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- 广告 ID：game.json 关了广告时 apply.mjs 改成 tools:node="remove" -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <!-- 应用内购买：这一版不做内购（CLAUDE.md 第 9 条）。依赖库（Cocos 的 libservice 等）合并进来的，这里删掉，
+         免得 Google Play 把游戏标成「含应用内购买」，和后台填的不一致 -->
+    <uses-permission android:name="com.android.vending.BILLING" tools:node="remove"/>
+
+    <!-- appCategory="game"：Android 16（API 36）起大屏上会忽略「只能竖屏」，游戏不受这条约束（Google Play 2026-08-31 起要求 target 36） -->
+    <application
+        android:appCategory="game"
+        android:allowBackup="true"
+        android:label="@string/game_app_name"
+        android:usesCleartextTraffic="false"
+        android:icon="@mipmap/ic_launcher">
+
+        <!-- Tell CocosNativeActivity the name of our .so -->
+        <meta-data android:name="android.app.lib_name"
+            android:value="cocos" />
+
+        <!-- AdMob 应用 ID（tools/native/apply.mjs 按 game.json 改写；现在是 Google 的测试 ID） -->
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <activity
+            android:name="com.cocos.game.AppActivity"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|smallestScreenSize"
+            android:label="@string/game_app_name"
+            android:theme="@style/GameGameTheme"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.cocos.lib.CocosEditBoxActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|smallestScreenSize"
+            android:screenOrientation="behind"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
+    </application>
+
+</manifest>

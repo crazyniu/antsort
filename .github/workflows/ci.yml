@@ -1,0 +1,33 @@
+name: CI
+
+# 只在向 main 提 PR 时跑。规则见 docs/05-开发规范.md 第 4 节，不要往这里加 job。
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci --prefix client --no-audit --no-fund
+
+      # 类型检查、.meta 与图片压缩检查、核心逻辑单测
+      - name: 代码检查与单元测试
+        run: ./run.sh check
+
+      - name: 关卡校验
+        run: ./run.sh level-verify

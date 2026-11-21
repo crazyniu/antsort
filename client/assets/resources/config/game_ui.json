@@ -1,0 +1,97 @@
+{
+ "fly": {
+  "seconds": 0.22,
+  "clearDelay": 0.08
+ },
+ "intro": {
+  "startDelay": 0.25,
+  "stagger": 0.02
+ },
+ "kindBanner": {
+  "slideIn": 0.35,
+  "hold": 1.2,
+  "fly": 0.4
+ },
+ "labTiers": [
+  {
+   "tray": -1,
+   "window": 2.5
+  },
+  {
+   "tray": 0,
+   "window": 0
+  },
+  {
+   "tray": 1,
+   "window": 6
+  }
+ ],
+ "demo": {
+  "ring": 0.3,
+  "gap": 0.25
+ },
+ "clock": {
+  "warn": 15
+ },
+ "tray": {
+  "warnFree": 2,
+  "skillNudgeFree": 2,
+  "rescueSkills": [
+   "undo",
+   "shuffle"
+  ],
+  "nudgeHand": [
+   "undo",
+   "shuffle"
+  ]
+ },
+ "hint": {
+  "tutorialLevels": 2,
+  "tutorialSeconds": 2.0,
+  "seconds": 8.0
+ },
+ "tips": {
+  "1": "TIP_RULE"
+ },
+ "tutorial": {
+  "delay": 0.4
+ },
+ "unlockGuide": {
+  "delay": 0.5,
+  "lockSeconds": 0.8,
+  "sparks": 18
+ },
+ "win": {
+  "celebrate": 1.0,
+  "starAt": 0.35,
+  "starGap": 0.15,
+  "coinsAt": 0.85,
+  "coinsRoll": 0.5,
+  "chestAt": 0.75,
+  "chestShake": 0.34,
+  "buttonsAt": 1.55
+ },
+ "badgeCap": 99,
+ "homeDeco": {
+  "hero": [
+   [
+    "c10",
+    0,
+    40,
+    200
+   ],
+   [
+    "c09",
+    -150,
+    -170,
+    120
+   ],
+   [
+    "c08",
+    150,
+    -170,
+    120
+   ]
+  ]
+ }
+}

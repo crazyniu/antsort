@@ -1,0 +1,51 @@
+// 全局服务的入口：平台、配置、存档。启动时 Boot 调 App.start()，之后界面层从这里取。
+import type { Capability, PlatformBase } from '../platform/platformBase';
+import { createPlatform } from '../platform/index';
+import * as Features from '../core/meta/features';
+import { Config } from './config';
+import { LaunchFlags, parseLaunch } from './launch';
+import { Save } from './save';
+
+/** 平台初始化（只做一次；失败了清掉，加载页重试时再来） */
+let platformReady: Promise<PlatformBase> | null = null;
+
+export class App {
+  static platform: PlatformBase;
+  static config: Config;
+  static save: Save;
+  static flags: LaunchFlags;
+
+  /**
+   * 能点开的最高一关：平时是存档进度；试玩模式（./run.sh 不带 real）所有关都能点开，进度本身不改
+   * （run.sh 里所有关卡都解锁）
+   */
+  static reach(): number {
+    return App.flags.boost ? Math.max(App.save.data.level, App.config.levelCount) : App.save.data.level;
+  }
+
+  /** 功能开没开：按存档进度；试玩模式下「选关」（地图、选关页）一直开着，好挑关 */
+  static featureOpen(f: string): boolean {
+    return (App.flags.boost && f === 'levelSelect') || Features.isUnlocked(App.config.eco, f, App.save.data.level);
+  }
+
+  static async start(): Promise<void> {
+    // 平台只建、只初始化一次：加载页重试这一步（比如后面的配置没读下来）时不再新建平台、重复向原生注册监听和初始化广告
+    if (!platformReady) {
+      platformReady = (async () => {
+        const p = createPlatform();
+        await p.init();
+        return p;
+      })();
+      platformReady.catch(() => (platformReady = null));
+    }
+    App.platform = await platformReady;
+    App.flags = parseLaunch(App.platform.launchQuery());
+    App.config = new Config();
+    await App.config.load();
+    // 每日任务：平台没有对应能力的不进池子（如分享；cap 为 ads 的「看广告」在这一版没有广告时不进，docs/01）
+    const tasks = App.config.eco.tasks;
+    if (tasks) tasks.pool = tasks.pool.filter((t) => t.cap === undefined || App.platform.hasCapability(t.cap as Capability));
+    App.save = new Save(App.platform);
+    App.save.load(App.config.eco, App.flags);
+  }
+}

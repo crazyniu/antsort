@@ -1,0 +1,154 @@
+{
+ "cards": [
+  {
+   "id": "c01",
+   "name": "示例卡 1",
+   "rarity": "common"
+  },
+  {
+   "id": "c02",
+   "name": "示例卡 2",
+   "rarity": "common"
+  },
+  {
+   "id": "c03",
+   "name": "示例卡 3",
+   "rarity": "common"
+  },
+  {
+   "id": "c04",
+   "name": "示例卡 4",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c05",
+   "name": "示例卡 5",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c06",
+   "name": "示例卡 6",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c07",
+   "name": "示例卡 7",
+   "rarity": "rare"
+  },
+  {
+   "id": "c08",
+   "name": "示例卡 8",
+   "rarity": "rare"
+  },
+  {
+   "id": "c09",
+   "name": "示例卡 9",
+   "rarity": "epic"
+  },
+  {
+   "id": "c10",
+   "name": "示例卡 10",
+   "rarity": "legend"
+  },
+  {
+   "id": "c11",
+   "name": "示例卡 11",
+   "rarity": "common"
+  },
+  {
+   "id": "c12",
+   "name": "示例卡 12",
+   "rarity": "common"
+  },
+  {
+   "id": "c13",
+   "name": "示例卡 13",
+   "rarity": "common"
+  },
+  {
+   "id": "c14",
+   "name": "示例卡 14",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c15",
+   "name": "示例卡 15",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c16",
+   "name": "示例卡 16",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c17",
+   "name": "示例卡 17",
+   "rarity": "rare"
+  },
+  {
+   "id": "c18",
+   "name": "示例卡 18",
+   "rarity": "rare"
+  },
+  {
+   "id": "c19",
+   "name": "示例卡 19",
+   "rarity": "epic"
+  },
+  {
+   "id": "c20",
+   "name": "示例卡 20",
+   "rarity": "legend"
+  },
+  {
+   "id": "c21",
+   "name": "示例卡 21",
+   "rarity": "common"
+  },
+  {
+   "id": "c22",
+   "name": "示例卡 22",
+   "rarity": "common"
+  },
+  {
+   "id": "c23",
+   "name": "示例卡 23",
+   "rarity": "common"
+  },
+  {
+   "id": "c24",
+   "name": "示例卡 24",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c25",
+   "name": "示例卡 25",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c26",
+   "name": "示例卡 26",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "c27",
+   "name": "示例卡 27",
+   "rarity": "rare"
+  },
+  {
+   "id": "c28",
+   "name": "示例卡 28",
+   "rarity": "rare"
+  },
+  {
+   "id": "c29",
+   "name": "示例卡 29",
+   "rarity": "epic"
+  },
+  {
+   "id": "c30",
+   "name": "示例卡 30",
+   "rarity": "legend"
+  }
+ ]
+}

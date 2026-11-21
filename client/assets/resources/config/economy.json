@@ -1,0 +1,487 @@
+{
+ "_comment": "economy.json 的每个字段说明见 docs/01-玩法设计.md 第 4 节（外围系统）；动数值前后跑 ./run.sh eco-sim",
+ "levelCoins": 30,
+ "challengeCoins": 60,
+ "bossCoins": 90,
+ "adCoinMultiplier": 2,
+ "toolStart": {
+  "undo": 0,
+  "hint": 0,
+  "shuffle": 0
+ },
+ "toolPrice": {
+  "undo": 100,
+  "hint": 120,
+  "shuffle": 100
+ },
+ "toolMaxFree": 2,
+ "toolMaxFreeById": {
+  "undo": 3
+ },
+ "stars": {
+  "twoStarLine": {
+   "normal": 1,
+   "hard": 2,
+   "boss": 3
+  },
+  "first3": {
+   "normal": {
+    "coins": 30
+   },
+   "hard": {
+    "coins": 60,
+    "card": "uncommon"
+   },
+   "boss": {
+    "coins": 60,
+    "skill": 1
+   }
+  },
+  "earlyUntil": 20,
+  "earlyCoins": 30
+ },
+ "dupeCoins": {
+  "common": 10,
+  "uncommon": 25,
+  "rare": 60,
+  "epic": 150,
+  "legend": 500
+ },
+ "freeCoin": {
+  "amount": 60,
+  "daily": 5
+ },
+ "easeAfterFails": [
+  2,
+  4
+ ],
+ "combo": {
+  "windowSeconds": 4.0,
+  "startAt": 3,
+  "maxCoinsPerLevel": 12,
+  "tiers": [
+   {
+    "at": 3,
+    "coins": 1,
+    "key": "UI_COMBO_T1"
+   },
+   {
+    "at": 5,
+    "coins": 1,
+    "key": "UI_COMBO_T2"
+   },
+   {
+    "at": 8,
+    "coins": 1,
+    "key": "UI_COMBO_T3"
+   },
+   {
+    "at": 12,
+    "coins": 2,
+    "key": "UI_COMBO_T4"
+   }
+  ],
+  "cardChance": {
+   "8": 30,
+   "12": 60,
+   "16": 100
+  },
+  "bestBonus": {
+   "minCombo": 5,
+   "coinsPerCombo": 1,
+   "max": 8
+  }
+ },
+ "rarities": [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legend"
+ ],
+ "lives": {
+  "max": 5,
+  "regenSeconds": 1200,
+  "freeUntilLevel": 5,
+  "buyOneCoins": 80,
+  "refillCoins": 300,
+  "firstWinUnlimitedSeconds": 600,
+  "adDaily": 5
+ },
+ "skills": {
+  "order": [
+   "undo",
+   "hint",
+   "shuffle"
+  ],
+  "grantOnUnlock": 1,
+  "freePerDay": 1,
+  "freeDaily": 1,
+  "freeLevelUntil": 14,
+  "freeAllUntil": 10,
+  "gift": {
+   "after": 14,
+   "count": 1
+  }
+ },
+ "album": {
+  "books": [
+   {
+    "id": 1,
+    "chapter": "1",
+    "unlock": 8,
+    "cards": [
+     "c01",
+     "c02",
+     "c03",
+     "c04",
+     "c05",
+     "c06",
+     "c07",
+     "c08",
+     "c09",
+     "c10"
+    ],
+    "reward": {
+     "coins": 200,
+     "tools": 1
+    }
+   },
+   {
+    "id": 2,
+    "chapter": "3",
+    "unlock": 41,
+    "cards": [
+     "c11",
+     "c12",
+     "c13",
+     "c14",
+     "c15",
+     "c16",
+     "c17",
+     "c18",
+     "c19",
+     "c20"
+    ],
+    "reward": {
+     "coins": 300,
+     "tools": 1
+    }
+   },
+   {
+    "id": 3,
+    "chapter": "5",
+    "unlock": 81,
+    "cards": [
+     "c21",
+     "c22",
+     "c23",
+     "c24",
+     "c25",
+     "c26",
+     "c27",
+     "c28",
+     "c29",
+     "c30"
+    ],
+    "reward": {
+     "coins": 500,
+     "tools": 1
+    }
+   }
+  ],
+  "final": {
+   "coins": 2000,
+   "tools": 3,
+   "unlimited": 10800
+  }
+ },
+ "dailyChallenge": {
+  "levelStep": 5,
+  "retryCoins": 30,
+  "reward": {
+   "coins": 200
+  },
+  "streakDays": 7,
+  "streakReward": {
+   "coins": 1000,
+   "skills": 1,
+   "unlimited": 3600
+  }
+ },
+ "tasks": {
+  "fixed": [
+   "win",
+   "clear",
+   "ad"
+  ],
+  "random": 3,
+  "count": 6,
+  "dayMax": 100,
+  "pool": [
+   {
+    "id": "win",
+    "goal": 3,
+    "points": 30
+   },
+   {
+    "id": "clear",
+    "goal": 30,
+    "points": 20
+   },
+   {
+    "id": "ad",
+    "goal": 1,
+    "points": 20,
+    "cap": "ads"
+   },
+   {
+    "id": "combo",
+    "goal": 6,
+    "points": 20,
+    "mode": "max"
+   },
+   {
+    "id": "play",
+    "goal": 5,
+    "points": 20
+   },
+   {
+    "id": "skill",
+    "goal": 1,
+    "points": 20,
+    "feature": "skill_shuffle"
+   },
+   {
+    "id": "daily",
+    "goal": 1,
+    "points": 20,
+    "feature": "daily"
+   },
+   {
+    "id": "wheel",
+    "goal": 1,
+    "points": 20,
+    "feature": "wheel"
+   }
+  ],
+  "dayTiers": [
+   {
+    "points": 20,
+    "reward": {
+     "coins": 16
+    }
+   },
+   {
+    "points": 50,
+    "reward": {
+     "coins": 20
+    }
+   },
+   {
+    "points": 80,
+    "reward": {
+     "coins": 24
+    }
+   },
+   {
+    "points": 100,
+    "card": {
+     "rates": {
+      "common": 65,
+      "uncommon": 35
+     }
+    }
+   }
+  ],
+  "weekTiers": [
+   {
+    "points": 150,
+    "reward": {
+     "coins": 60,
+     "skills": 1
+    }
+   },
+   {
+    "points": 350,
+    "card": {
+     "minRarity": "uncommon"
+    }
+   },
+   {
+    "points": 550,
+    "reward": {
+     "coins": 80,
+     "skills": 1,
+     "unlimited": 1800
+    },
+    "card": {
+     "minRarity": "rare",
+     "preferUnowned": true
+    }
+   }
+  ]
+ },
+ "features": {
+  "signin": 3,
+  "skill_undo": 2,
+  "skill_hint": 4,
+  "skill_shuffle": 6,
+  "levelSelect": 5,
+  "album": 8,
+  "wheel": 10,
+  "tasks": 11,
+  "daily": 20
+ },
+ "chest": {
+  "normal": {
+   "coins": 44,
+   "skill": 3,
+   "card": 53,
+   "coinMin": 6,
+   "coinMax": 16
+  },
+  "challengeRareBoost": 2,
+  "cardRates": {
+   "common": 55,
+   "uncommon": 30,
+   "rare": 10.5,
+   "epic": 4,
+   "legend": 0.5
+  },
+  "pityAfter": 4
+ },
+ "wheel": {
+  "freePerDay": 1,
+  "firstWinSpins": 1,
+  "adPerDay": 3,
+  "coinCost": 200,
+  "tenCost": 1800,
+  "tenCount": 10,
+  "tenMinRarity": "rare",
+  "pityAfter": 30,
+  "pityMinRarity": "epic",
+  "unlimitedSeconds": 900,
+  "prizes": [
+   {
+    "id": "coin200",
+    "kind": "coins",
+    "amount": 30,
+    "weight": 24
+   },
+   {
+    "id": "coin500",
+    "kind": "coins",
+    "amount": 60,
+    "weight": 14
+   },
+   {
+    "id": "coin2000",
+    "kind": "coins",
+    "amount": 200,
+    "weight": 3
+   },
+   {
+    "id": "skill",
+    "kind": "skill",
+    "amount": 1,
+    "weight": 5
+   },
+   {
+    "id": "life15",
+    "kind": "unlimited",
+    "amount": 900,
+    "weight": 3
+   },
+   {
+    "id": "card_common",
+    "kind": "card",
+    "rarity": "common",
+    "weight": 26.2
+   },
+   {
+    "id": "card_uncommon",
+    "kind": "card",
+    "rarity": "uncommon",
+    "weight": 15
+   },
+   {
+    "id": "card_rare",
+    "kind": "card",
+    "rarity": "rare",
+    "weight": 7
+   },
+   {
+    "id": "card_epic",
+    "kind": "card",
+    "rarity": "epic",
+    "weight": 2.5
+   },
+   {
+    "id": "card_legend",
+    "kind": "card",
+    "rarity": "legend",
+    "weight": 0.3
+   }
+  ]
+ },
+ "signInDays": [
+  {
+   "coins": 40
+  },
+  {
+   "coins": 60
+  },
+  {
+   "chest": {
+    "skill": 30,
+    "card": 70
+   }
+  },
+  {
+   "coins": 100
+  },
+  {
+   "wheel": 1
+  },
+  {
+   "skill": 1
+  },
+  {
+   "bigChest": {
+    "minRarity": "rare",
+    "coins": 200,
+    "unlimitedSeconds": 1800
+   }
+  }
+ ],
+ "replay": {
+  "rewardedPerDay": 5
+ },
+ "chapters": [
+  {
+   "id": "1",
+   "levelFrom": 1
+  },
+  {
+   "id": "2",
+   "levelFrom": 21
+  },
+  {
+   "id": "3",
+   "levelFrom": 41
+  },
+  {
+   "id": "4",
+   "levelFrom": 61
+  },
+  {
+   "id": "5",
+   "levelFrom": 81
+  },
+  {
+   "id": "6",
+   "levelFrom": 101
+  }
+ ]
+}

@@ -1,0 +1,218 @@
+keys,zh_CN,en,zh_TW,ja,ko,de,fr,es,pt,it,ru,tr
+ADS_LEFT,剩 %d 次,%d left,剩 %d 次,残り %d 回,%d회 남음,Noch %d,Reste %d,Quedan %d,Restam %d,Ne restano %d,Осталось %d,%d hak kaldı
+ALBUM_CLAIMED,已领取,Claimed,已領取,受け取り済み,받음,Erhalten,Reçu,Recogido,Recebido,Preso,Получено,Alındı
+ALBUM_FINAL_PREVIEW,集齐全部册子可领,Complete every album,集齊全部冊子可領,全部の図鑑をコンプでもらえる,모든 도감을 채우면 받아요,Für alle vollen Alben,Complète tous les albums,Completa todos los álbumes,Complete todos os álbuns,Completa tutti gli album,Собери все альбомы,Tüm albümleri tamamla
+ALBUM_TAKE,领取,Claim,領取,受け取る,받기,Holen,Prendre,Recoger,Pegar,Prendi,Забрать,Al
+BOOT_FAIL,网络不太好，加载失败,Couldn't load. Check your connection,網路不太好，載入失敗,読み込めませんでした。通信を確認してね,불러오지 못했어요. 연결을 확인해 주세요,Laden fehlgeschlagen. Prüfe deine Verbindung,Échec du chargement. Vérifie ta connexion,No se pudo cargar. Revisa tu conexión,Falha ao carregar. Verifique sua conexão,Caricamento non riuscito. Controlla la connessione,Не удалось загрузить. Проверь интернет,Yüklenemedi. Bağlantını kontrol et
+BOOT_HEALTH,"抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。
+适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活。",,,,,,,,,,,
+BOOT_NAME,我的游戏,My Game,我的遊戲,マイゲーム,마이 게임,My Game,My Game,My Game,My Game,My Game,My Game,My Game
+BOOT_RETRY,重试,Retry,重試,もう一度,다시 시도,Nochmal,Réessayer,Reintentar,Tentar de novo,Riprova,Повторить,Tekrar dene
+BOOT_TIP_1,点没被压住的块,Tap tiles that aren’t covered,點沒被壓住的塊,上に何もないタイルをタップ,가려지지 않은 타일을 누르세요,Tippe freie Steine an,Touche les tuiles libres,Toca las fichas libres,Toque nas peças livres,Tocca le tessere libere,Нажимай на открытые фишки,Açık taşlara dokun
+BOOT_TIP_2,同样的三个会消掉,Three of a kind clear,同樣的三個會消掉,同じ3つで消える,같은 3개가 모이면 사라져요,Drei gleiche verschwinden,Trois identiques disparaissent,Tres iguales desaparecen,Três iguais somem,Tre uguali spariscono,Три одинаковые исчезают,Üç aynı taş kaybolur
+BOOT_TIP_3,卡住了试试洗牌,Stuck? Try Shuffle,卡住了試試洗牌,困ったらまぜまぜ,막히면 섞기를 써 보세요,Fest? Versuch’s mit Mischen,Bloqué ? Essaie Mélange,¿Atascado? Prueba a mezclar,Travou? Use Mexer,Bloccato? Prova Mescola,Застрял? Попробуй «Микс»,Takıldın mı? Karıştır’ı dene
+BOOT_TIP_4,走错一步可以撤销,Made a mistake? Undo it,走錯一步可以復原,まちがえたら「もどす」,실수했다면 되돌리기,Fehler? Mach ihn rückgängig,Une erreur ? Annule-la,¿Un error? Deshazlo,Errou? Desfaça,Errore? Annullalo,Ошибся? Отмени ход,Hata mı yaptın? Geri al
+BOOT_TIP_5,不知道点哪块就用提示,Not sure? Use a Hint,不知道點哪塊就用提示,迷ったらヒント,모르겠으면 힌트를 써 보세요,Unsicher? Nimm einen Tipp,Hésitant ? Prends un indice,¿Dudas? Usa una pista,Na dúvida? Use uma dica,Dubbi? Usa un aiuto,Не уверен? Возьми совет,Emin değil misin? İpucu al
+BOOT_TIP_6,连击越高金币越多,"Bigger combos, more coins",連擊越高金幣越多,コンボが長いほどコインが増える,콤보가 길수록 코인이 늘어나요,"Größere Combos, mehr Münzen","Plus de combo, plus de pièces","Más combo, más monedas","Mais combo, mais moedas","Più combo, più monete",Больше комбо — больше монет,Kombo büyüdükçe altın artar
+BOOT_TIP_7,每天来签到领奖励,Sign in daily for rewards,每天來簽到領獎勵,毎日ログインでボーナス,매일 출석하고 보상 받기,Hol dir jeden Tag deinen Bonus,Reviens chaque jour pour ton cadeau,Entra cada día por tu regalo,Volte todo dia para ganhar presentes,Torna ogni giorno per il regalo,Заходи каждый день за подарком,"Her gün gel, hediyeni al"
+BOOT_TIP_8,收集卡片能集齐整本收藏册,Collect cards to finish an album,收集卡片能集齊整本收藏冊,カードを集めて図鑑をコンプ,카드를 모아 도감을 완성해요,Sammle Karten für volle Alben,Collectionne les cartes pour finir un album,Colecciona cartas para completar álbumes,Junte cartas para completar álbuns,Raccogli carte per completare gli album,"Собирай карты, чтобы заполнить альбом","Kart topla, albümü tamamla"
+CARD_C01,示例卡 1,Card 1,範例卡 1,カード 1,카드 1,Karte 1,Carte 1,Carta 1,Carta 1,Carta 1,Карта 1,Kart 1
+CARD_C02,示例卡 2,Card 2,範例卡 2,カード 2,카드 2,Karte 2,Carte 2,Carta 2,Carta 2,Carta 2,Карта 2,Kart 2
+CARD_C03,示例卡 3,Card 3,範例卡 3,カード 3,카드 3,Karte 3,Carte 3,Carta 3,Carta 3,Carta 3,Карта 3,Kart 3
+CARD_C04,示例卡 4,Card 4,範例卡 4,カード 4,카드 4,Karte 4,Carte 4,Carta 4,Carta 4,Carta 4,Карта 4,Kart 4
+CARD_C05,示例卡 5,Card 5,範例卡 5,カード 5,카드 5,Karte 5,Carte 5,Carta 5,Carta 5,Carta 5,Карта 5,Kart 5
+CARD_C06,示例卡 6,Card 6,範例卡 6,カード 6,카드 6,Karte 6,Carte 6,Carta 6,Carta 6,Carta 6,Карта 6,Kart 6
+CARD_C07,示例卡 7,Card 7,範例卡 7,カード 7,카드 7,Karte 7,Carte 7,Carta 7,Carta 7,Carta 7,Карта 7,Kart 7
+CARD_C08,示例卡 8,Card 8,範例卡 8,カード 8,카드 8,Karte 8,Carte 8,Carta 8,Carta 8,Carta 8,Карта 8,Kart 8
+CARD_C09,示例卡 9,Card 9,範例卡 9,カード 9,카드 9,Karte 9,Carte 9,Carta 9,Carta 9,Carta 9,Карта 9,Kart 9
+CARD_C10,示例卡 10,Card 10,範例卡 10,カード 10,카드 10,Karte 10,Carte 10,Carta 10,Carta 10,Carta 10,Карта 10,Kart 10
+CARD_C11,示例卡 11,Card 11,範例卡 11,カード 11,카드 11,Karte 11,Carte 11,Carta 11,Carta 11,Carta 11,Карта 11,Kart 11
+CARD_C12,示例卡 12,Card 12,範例卡 12,カード 12,카드 12,Karte 12,Carte 12,Carta 12,Carta 12,Carta 12,Карта 12,Kart 12
+CARD_C13,示例卡 13,Card 13,範例卡 13,カード 13,카드 13,Karte 13,Carte 13,Carta 13,Carta 13,Carta 13,Карта 13,Kart 13
+CARD_C14,示例卡 14,Card 14,範例卡 14,カード 14,카드 14,Karte 14,Carte 14,Carta 14,Carta 14,Carta 14,Карта 14,Kart 14
+CARD_C15,示例卡 15,Card 15,範例卡 15,カード 15,카드 15,Karte 15,Carte 15,Carta 15,Carta 15,Carta 15,Карта 15,Kart 15
+CARD_C16,示例卡 16,Card 16,範例卡 16,カード 16,카드 16,Karte 16,Carte 16,Carta 16,Carta 16,Carta 16,Карта 16,Kart 16
+CARD_C17,示例卡 17,Card 17,範例卡 17,カード 17,카드 17,Karte 17,Carte 17,Carta 17,Carta 17,Carta 17,Карта 17,Kart 17
+CARD_C18,示例卡 18,Card 18,範例卡 18,カード 18,카드 18,Karte 18,Carte 18,Carta 18,Carta 18,Carta 18,Карта 18,Kart 18
+CARD_C19,示例卡 19,Card 19,範例卡 19,カード 19,카드 19,Karte 19,Carte 19,Carta 19,Carta 19,Carta 19,Карта 19,Kart 19
+CARD_C20,示例卡 20,Card 20,範例卡 20,カード 20,카드 20,Karte 20,Carte 20,Carta 20,Carta 20,Carta 20,Карта 20,Kart 20
+CARD_C21,示例卡 21,Card 21,範例卡 21,カード 21,카드 21,Karte 21,Carte 21,Carta 21,Carta 21,Carta 21,Карта 21,Kart 21
+CARD_C22,示例卡 22,Card 22,範例卡 22,カード 22,카드 22,Karte 22,Carte 22,Carta 22,Carta 22,Carta 22,Карта 22,Kart 22
+CARD_C23,示例卡 23,Card 23,範例卡 23,カード 23,카드 23,Karte 23,Carte 23,Carta 23,Carta 23,Carta 23,Карта 23,Kart 23
+CARD_C24,示例卡 24,Card 24,範例卡 24,カード 24,카드 24,Karte 24,Carte 24,Carta 24,Carta 24,Carta 24,Карта 24,Kart 24
+CARD_C25,示例卡 25,Card 25,範例卡 25,カード 25,카드 25,Karte 25,Carte 25,Carta 25,Carta 25,Carta 25,Карта 25,Kart 25
+CARD_C26,示例卡 26,Card 26,範例卡 26,カード 26,카드 26,Karte 26,Carte 26,Carta 26,Carta 26,Carta 26,Карта 26,Kart 26
+CARD_C27,示例卡 27,Card 27,範例卡 27,カード 27,카드 27,Karte 27,Carte 27,Carta 27,Carta 27,Carta 27,Карта 27,Kart 27
+CARD_C28,示例卡 28,Card 28,範例卡 28,カード 28,카드 28,Karte 28,Carte 28,Carta 28,Carta 28,Carta 28,Карта 28,Kart 28
+CARD_C29,示例卡 29,Card 29,範例卡 29,カード 29,카드 29,Karte 29,Carte 29,Carta 29,Carta 29,Carta 29,Карта 29,Kart 29
+CARD_C30,示例卡 30,Card 30,範例卡 30,カード 30,카드 30,Karte 30,Carte 30,Carta 30,Carta 30,Carta 30,Карта 30,Kart 30
+CARD_RARITY_NEW,新卡片！,New card!,新卡片！,NEW！,새 카드!,Neue Karte!,Nouvelle carte !,¡Carta nueva!,Carta nova!,Carta nuova!,Новая карта!,Yeni kart!
+CHAPTER_1,第 1 章,Chapter 1,第 1 章,第1章,1장,Kapitel 1,Chapitre 1,Capítulo 1,Capítulo 1,Capitolo 1,Глава 1,Bölüm 1
+CHAPTER_2,第 2 章,Chapter 2,第 2 章,第2章,2장,Kapitel 2,Chapitre 2,Capítulo 2,Capítulo 2,Capitolo 2,Глава 2,Bölüm 2
+CHAPTER_3,第 3 章,Chapter 3,第 3 章,第3章,3장,Kapitel 3,Chapitre 3,Capítulo 3,Capítulo 3,Capitolo 3,Глава 3,Bölüm 3
+CHAPTER_4,第 4 章,Chapter 4,第 4 章,第4章,4장,Kapitel 4,Chapitre 4,Capítulo 4,Capítulo 4,Capitolo 4,Глава 4,Bölüm 4
+CHAPTER_5,第 5 章,Chapter 5,第 5 章,第5章,5장,Kapitel 5,Chapitre 5,Capítulo 5,Capítulo 5,Capitolo 5,Глава 5,Bölüm 5
+CHAPTER_6,第 6 章,Chapter 6,第 6 章,第6章,6장,Kapitel 6,Chapitre 6,Capítulo 6,Capítulo 6,Capitolo 6,Глава 6,Bölüm 6
+DAILY_BIG_CHEST,七日大奖,Streak Prize,七日大獎,7日間ボーナス,7일 보상,Serienpreis,Prix de série,Premio de racha,Prêmio da sequência,Premio serie,Приз за серию,Seri ödülü
+DAILY_CHEST,通关奖励,Rewards,通關獎勵,クリア報酬,클리어 보상,Belohnung,Récompenses,Premios,Prêmios,Premi,Награды,Ödüller
+DAILY_DONE,已完成,Completed,已完成,クリア済み,완료,Geschafft,Terminé,Completado,Concluído,Completata,Пройдено,Tamamlandı
+DAILY_FREE,免费 1 次,1 free try,免費 1 次,無料 1回,무료 1회,1x gratis,1 essai gratuit,1 intento gratis,1 tentativa grátis,1 tentativo gratis,1 попытка даром,1 bedava hak
+DAILY_RETRY,重试,Retry,重試,もう一度,다시 하기,Nochmal,Rejouer,Reintentar,De novo,Riprova,Ещё раз,Tekrar
+DAILY_RETRY_HINT,看广告或用金币重试,Retry with an ad or coins,看廣告或用金幣重試,広告かコインでもう一度,광고나 코인으로 다시 도전,Nochmal mit Werbung oder Münzen,Rejoue avec une pub ou des pièces,Reintenta con un anuncio o monedas,Tente de novo com anúncio ou moedas,Riprova con un video o monete,Ещё раз за рекламу или монеты,Reklam ya da altınla tekrar dene
+DAILY_RETRY_HINT_COINS,用金币再试一次,Retry with coins,用金幣再試一次,コインでもう一度,코인으로 다시 도전,Nochmal mit Münzen,Rejoue avec des pièces,Reintenta con monedas,Tente de novo com moedas,Riprova con le monete,Ещё раз за монеты,Altınla tekrar dene
+DAILY_START,开始挑战,Play,開始挑戰,スタート,도전,Spielen,Jouer,Jugar,Jogar,Gioca,Играть,Oyna
+DAILY_STREAK,连胜 %d/%d 天,Streak %d/%d,連勝 %d/%d 天,連続 %d/%d日,연속 %d/%d일,Serie %d/%d,Série %d/%d,Racha %d/%d,Sequência %d/%d,Serie %d/%d,Серия %d/%d,Seri %d/%d
+DAILY_TITLE,每日挑战,Daily Puzzle,每日挑戰,デイリーパズル,데일리 퍼즐,Tagesrätsel,Défi du jour,Reto diario,Desafio diário,Sfida del giorno,Задача дня,Günün bulmacası
+DAILY_TOMORROW,明天再来,Back tomorrow,明天再來,また明日,내일 또 와요,Bis morgen,À demain,Vuelve mañana,Volte amanhã,A domani,До завтра,Yarın gel
+GIFT_LINE,从下一关起，道具要用库存或金币了,"From the next level, boosters use your stock or coins",從下一關起，道具要用庫存或金幣了,次のレベルからアイテムは手持ちかコインで使います,다음 레벨부터 아이템은 보유분이나 코인으로 써요,Ab dem nächsten Level kosten Booster Vorrat oder Münzen,"Dès le prochain niveau, les bonus utilisent ton stock ou des pièces","Desde el próximo nivel, los potenciadores usan tu reserva o monedas","A partir da próxima fase, os bônus usam seu estoque ou moedas",Dal prossimo livello i bonus usano la scorta o le monete,Со следующего уровня бустеры тратят запас или монеты,Sonraki bölümden itibaren güçlendiriciler stoktan veya altından gider
+GIFT_TITLE,道具礼包,Booster Pack,道具禮包,アイテムパック,아이템 선물,Booster-Paket,Pack de bonus,Paquete de potenciadores,Pacote de bônus,Pacchetto bonus,Набор бустеров,Güçlendirici Paketi
+GOT_IT,知道了,Got it,知道了,OK,알겠어요,Alles klar,Compris,Entendido,Entendi,Ok,Понятно,Anladım
+H_CONGRATS,恭喜获得,Rewards,恭喜獲得,ゲット！,획득!,Belohnung,Récompenses,Premios,Prêmios,Premi,Награды,Ödüller
+H_ENTRY_LOCKED,等级 %d,Level %d,等級 %d,Lv.%d,레벨 %d,Level %d,Niv. %d,Nivel %d,Nível %d,Liv. %d,Ур. %d,Sv. %d
+H_FEAT_COLLECTION,收藏,Album,收藏,図鑑,도감,Album,Album,Álbum,Álbum,Album,Альбом,Albüm
+H_FEAT_DAILY,每日挑战,Daily,每日挑戰,デイリー,데일리,Täglich,Défi,Diario,Diário,Sfida,Задача,Günlük
+H_FEAT_LEVELS,选关,Levels,選關,ステージ,레벨,Level,Niveaux,Niveles,Fases,Livelli,Уровни,Seviyeler
+H_FEAT_SIGNIN,签到,Check-in,簽到,ログボ,출석,Bonus,Cadeau,Regalo,Presente,Regalo,Подарок,Hediye
+H_FEAT_WHEEL,抽奖,Treasure,抽獎,宝箱,보물상자,Schatz,Trésor,Tesoro,Tesouro,Tesoro,Клад,Hazine
+H_GIVE_UP,放弃,Give Up,放棄,あきらめる,포기,Aufgeben,Abandonner,Rendirse,Desistir,Arrenditi,Сдаться,Pes et
+H_GO_LOOK,去看看,Go,去看看,見てみる,보러 가기,Los,Voir,Ver,Ver,Vai,Глянуть,Git
+H_GRAND_PRIZE,大奖,Grand prize,大獎,大当たり,대상,Hauptpreis,Gros lot,Gran premio,Prêmio máximo,Super premio,Главный приз,Büyük ödül
+H_INF_LEFT,无限生命 %s,Unlimited %s,無限生命 %s,ライフ無限 %s,무한 하트 %s,Unendlich %s,Illimitées %s,Ilimitadas %s,Infinitas %s,Infinite %s,Безлимит %s,Sınırsız %s
+H_KEEP_PLAYING,继续玩,Keep Playing,繼續玩,つづける,계속하기,Weiterspielen,Continuer,Seguir,Continuar,Continua,Играть дальше,Devam et
+H_LANGUAGE,语言,Language,語言,言語,언어,Sprache,Langue,Idioma,Idioma,Lingua,Язык,Dil
+H_LEAVE,退出,Quit,退出,やめる,나가기,Aufhören,Quitter,Salir,Sair,Esci,Выйти,Çık
+H_LEAVE_LINE,现在退出会扣 1 条命,Quitting costs 1 life,現在退出會扣 1 條命,今やめるとライフが1減ります,지금 나가면 하트 1개가 줄어요,Aufhören kostet 1 Leben,Quitter coûte 1 vie,Salir te cuesta 1 vida,Sair custa 1 vida,Uscire costa 1 vita,Выход стоит 1 жизнь,Çıkarsan 1 can gider
+H_LEAVE_TITLE,退出关卡,Quit Level,退出關卡,やめる？,그만할까요?,Aufhören?,Quitter ?,¿Salir?,Sair?,Uscire?,Выйти?,Çıkılsın mı?
+H_LIVES_FULL,生命已满,Full,生命已滿,満タン,가득 참,Voll,Plein,Llenas,Cheio,Piene,Полно,Dolu
+H_LIVES_TITLE,生命,Lives,生命,ライフ,하트,Leben,Vies,Vidas,Vidas,Vite,Жизни,Canlar
+H_MUSIC,音乐,Music,音樂,BGM,음악,Musik,Musique,Música,Música,Musica,Музыка,Müzik
+H_NEED_COINS,金币不足,Out of Coins,金幣不足,コイン不足,코인 부족,Zu wenig Münzen,Plus de pièces,Faltan monedas,Sem moedas,Niente monete,Мало монет,Altın yetersiz
+H_NEED_COINS_LINE,还差 %d 金币,Need %d more coins,還差 %d 金幣,あと %d コイン必要,%d 코인이 더 필요해요,Dir fehlen %d Münzen,Il te manque %d pièces,Te faltan %d monedas,Faltam %d moedas,Ti mancano %d monete,Не хватает %d монет,%d altın daha lazım
+H_NEXT_LIFE,下一条 %s,Next in %s,下一條 %s,次まで %s,다음 %s,Nächstes in %s,Prochaine : %s,Siguiente en %s,Próxima em %s,Prossima tra %s,Ещё одна через %s,Sonraki %s
+H_PRIZE_FRAME,头像框,Avatar frame,頭像框,アイコン枠,프로필 테두리,Bilderrahmen,Cadre de profil,Marco de avatar,Moldura,Cornice avatar,Рамка аватара,Profil çerçevesi
+H_REFILL,补满,Refill,補滿,全回復,가득 채우기,Auffüllen,Tout remplir,Rellenar,Encher,Ricarica,Пополнить,Doldur
+H_RETRY,重试,Retry,重試,もう一度,다시 하기,Nochmal,Rejouer,Reintentar,De novo,Riprova,Ещё раз,Tekrar
+H_REVIVE_AD,复活,Revive,復活,復活,부활,Weiter,Reprendre,Revivir,Reviver,Riprova,Продолжить,Canlan
+H_REVIVE_LINE,复活后接着玩,Revive and keep going,復活後接著玩,復活してつづけよう,부활해서 계속해요,Wiederbeleben und weiter,Reprends la partie,Revive y sigue jugando,Reviva e continue,Torna in gioco e continua,Вернись в игру,Canlan ve devam et
+H_SKILL_HINT,提示,Hint,提示,ヒント,힌트,Tipp,Indice,Pista,Dica,Aiuto,Совет,İpucu
+H_SKILL_SHUFFLE,洗牌,Shuffle,洗牌,まぜまぜ,섞기,Mischen,Mélange,Mezclar,Mexer,Mescola,Микс,Karıştır
+H_SKILL_UNDO,撤销,Undo,復原,もどす,되돌리기,Zurück,Annuler,Deshacer,Desfazer,Annulla,Назад,Geri al
+H_SOUND,音效,Sound,音效,効果音,효과음,Sound,Sons,Sonido,Sons,Suoni,Звуки,Ses
+H_SPIN,开箱,Open,開箱,開ける,열기,Öffnen,Ouvrir,Abrir,Abrir,Apri,Открыть,Aç
+H_SPINS_LEFT,剩 %d 次,%d left,剩 %d 次,残り %d 回,%d회 남음,Noch %d,Reste %d,Quedan %d,Restam %d,Ne restano %d,Осталось %d,%d hak kaldı
+H_TEN_PULL,十连,Open ×10,十連,10回開ける,10회 열기,×10 öffnen,Ouvrir ×10,Abrir ×10,Abrir ×10,Apri ×10,Открыть ×10,×10 aç
+H_TO_HOME,主页,Home,首頁,ホーム,홈,Start,Accueil,Inicio,Início,Home,Меню,Ana sayfa
+H_UNLOCKS_AT,第 %d 关解锁,Level %d,第 %d 關解鎖,Lv.%dで解放,레벨 %d,Level %d,Niveau %d,Nivel %d,Nível %d,Livello %d,Уровень %d,Seviye %d
+H_UNLOCK_LINE,%s 已解锁,%s unlocked,%s 已解鎖,%sが解放されました,%s 열림,%s freigeschaltet,%s débloqué,%s desbloqueado,%s liberado,%s sbloccato,Открыто: %s,%s açıldı
+H_UNLOCK_TITLE,新功能,Unlocked!,新功能,新機能！,새 기능!,Neu!,Nouveau !,¡Nuevo!,Novidade!,Novità!,Новинка!,Yeni!
+H_VIBRATION,震动,Vibration,震動,バイブ,진동,Vibration,Vibrations,Vibración,Vibração,Vibrazione,Вибрация,Titreşim
+H_WATCH_COINS,+%d 金币,+%d coins,+%d 金幣,+%d コイン,+%d 코인,+%d Münzen,+%d pièces,+%d monedas,+%d moedas,+%d monete,+%d монет,+%d altın
+LIFE_MINUS,生命 −1,Life −1,生命 −1,ライフ −1,하트 −1,Leben −1,Vie −1,Vida −1,Vida −1,Vita −1,Жизнь −1,Can −1
+LOCK_PREVIEW,解锁奖励,Unlock rewards,解鎖獎勵,解放ボーナス,열림 보상,Belohnungen,Récompenses,Premios,Prêmios,Premi,Награды,Ödüller
+LV_CURRENT,当前,Now,目前,いまここ,현재,Jetzt,Ici,Aquí,Aqui,Qui,Сейчас,Şimdi
+LV_LOCKED,先过前面的关,Beat earlier levels first,先過前面的關,前のステージをクリアしよう,앞 레벨을 먼저 깨요,Erst frühere Level schaffen,Termine d’abord les niveaux d’avant,Supera antes los niveles anteriores,Passe as fases anteriores primeiro,Prima supera i livelli precedenti,Сначала пройди прошлые уровни,Önce önceki seviyeleri geç
+LV_REPLAY_LEFT,重玩奖励 %d/%d,Replay bonus %d/%d,重玩獎勵 %d/%d,再挑戦ボーナス %d/%d,재도전 보너스 %d/%d,Wiederholbonus %d/%d,Bonus rejeu %d/%d,Bonus de repetir %d/%d,Bônus de repetir %d/%d,Bonus rigioco %d/%d,Бонус за повтор %d/%d,Tekrar bonusu %d/%d
+MAP_RANGE,第 %d–%d 关,Levels %d–%d,第 %d–%d 關,ステージ %d–%d,레벨 %d–%d,Level %d–%d,Niveaux %d–%d,Niveles %d–%d,Fases %d–%d,Livelli %d–%d,Уровни %d–%d,Seviye %d–%d
+MAP_ROUND,第 %d 轮,Round %d,第 %d 輪,%d周目,%d회차,Runde %d,Tour %d,Ronda %d,Rodada %d,Giro %d,Круг %d,%d. Tur
+MAP_TITLE,地图,Map,地圖,マップ,지도,Karte,Carte,Mapa,Mapa,Mappa,Карта,Harita
+MECH_TITLE,新玩法,New!,新玩法,新ルール,새 규칙!,Neu!,Nouveau !,¡Nuevo!,Novidade!,Novità!,Новинка!,Yeni!
+PAUSE_TITLE,暂停,Paused,暫停,ポーズ,일시 정지,Pause,Pause,Pausa,Pausa,Pausa,Пауза,Duraklat
+PRIZE_COINS,金币,Coins,金幣,コイン,코인,Münzen,Pièces,Monedas,Moedas,Monete,Монеты,Altın
+PRIZE_HOURS,%d 小时,%dh,%d 小時,%d時間,%d시간,%d Std.,%d h,%d h,%d h,%d h,%d ч,%d sa
+PROFILE_BEST_COMBO,最佳连击,Best combo,最佳連擊,最高コンボ,최고 콤보,Beste Combo,Meilleur combo,Mejor combo,Melhor combo,Miglior combo,Лучшее комбо,En iyi kombo
+PROFILE_CARDS,收藏,Album,收藏,図鑑,도감,Album,Album,Álbum,Álbum,Album,Альбом,Albüm
+PROFILE_CHANGE_AVATAR,换头像,Change,換頭像,変更,변경,Ändern,Changer,Cambiar,Trocar,Cambia,Сменить,Değiştir
+PROFILE_DEFAULT_AVATAR,默认,Default,預設,デフォルト,기본,Standard,Par défaut,Predeterminado,Padrão,Predefinito,Обычный,Varsayılan
+PROFILE_DEFAULT_NAME,玩家,Player,玩家,プレイヤー,플레이어,Spieler,Joueur,Jugador,Jogador,Giocatore,Игрок,Oyuncu
+PROFILE_LEVEL,关卡,Level,關卡,ステージ,레벨,Level,Niveau,Nivel,Fase,Livello,Уровень,Seviye
+PROFILE_PICK_AVATAR,选头像,Avatar,選頭像,アイコン,프로필 사진,Profilbild,Avatar,Avatar,Avatar,Avatar,Аватар,Avatar
+PROFILE_TITLE,个人资料,Profile,個人資料,プロフィール,프로필,Profil,Profil,Perfil,Perfil,Profilo,Профиль,Profil
+RANK_LEVELS,%d 关,Lv.%d,%d 關,Lv.%d,Lv.%d,Lv.%d,Niv.%d,Niv.%d,Nv.%d,Liv.%d,Ур.%d,Sv.%d
+RANK_ME,我,Me,我,自分,나,Ich,Moi,Yo,Eu,Io,Я,Ben
+RANK_RESET_IN,%d 天后重置,Resets in %dd,%d 天後重置,残り%d日,%d일 후 초기화,Neu in %d T.,Reset dans %d j,Reinicio en %d d,Reinicia em %d d,Reset tra %d g,Сброс через %d д.,%d gün kaldı
+RANK_TITLE,周排行,Leaderboard,週排行,ランキング,주간 순위,Rangliste,Classement,Clasificación,Ranking,Classifica,Рейтинг,Sıralama
+RESULT_FIRST_3STAR,首次三星,First 3 stars,首次三星,初の星3つ,첫 별 3개,Erste 3 Sterne,1res 3 étoiles,Primeras 3★,Primeiras 3★,Prime 3★,Первые 3★,İlk 3 yıldız
+RESULT_PERFECT,完美！一个道具都没用,Perfect! No boosters used,完美！一個道具都沒用,パーフェクト！アイテムなし,퍼펙트! 아이템 없이 클리어,Perfekt! Ganz ohne Extras,Parfait ! Sans aucun bonus,¡Perfecto! Sin potenciadores,Perfeito! Sem reforços,Perfetto! Senza aiuti,Идеально! Без бонусов,Mükemmel! Güçlendiricisiz
+RESULT_TRY_3STAR,不用道具就能拿 3 星,Win without boosters for 3 stars,不用道具就能拿 3 星,アイテムなしで星3つ,아이템 없이 깨면 별 3개,Ohne Extras gibt es 3 Sterne,Gagne sans bonus pour 3 étoiles,Gana sin potenciadores: 3 estrellas,Vença sem reforços: 3 estrelas,Vinci senza aiuti: 3 stelle,Без бонусов — 3 звезды,Güçlendiricisiz kazan: 3 yıldız
+RETURN_HOME,主页,Home,首頁,ホーム,홈,Start,Accueil,Inicio,Início,Home,Меню,Ana sayfa
+REVIVE_CLOCK,时间 +30 秒,+30s on the clock,時間 +30 秒,時間 +30秒,시간 +30초,+30 Sek.,+30 s au chrono,+30 s al reloj,+30 s no relógio,+30 s al timer,+30 с к таймеру,Süreye +30 sn
+REVIVE_TITLE,继续闯关？,Continue?,繼續闖關？,つづける？,계속할까요?,Weitermachen?,Continuer ?,¿Continuar?,Continuar?,Continuare?,Продолжить?,Devam mı?
+REVIVE_TRAY,撤回最后三块,Put back the last 3 tiles,撤回最後三塊,最後の3つを戻す,마지막 3개 되돌리기,Letzte 3 Steine zurück,Reposer les 3 dernières tuiles,Devolver las 3 últimas fichas,Devolver as 3 últimas peças,Rimetti le ultime 3 tessere,Вернуть 3 последние фишки,Son 3 taşı geri koy
+SAVE_FAIL,进度没存上，等下会自动重试,Save failed. Retrying soon,進度沒存上，等下會自動重試,セーブできませんでした。また試すね,저장하지 못했어요. 잠시 후 다시 시도할게요,Speichern fehlgeschlagen. Gleich nochmal,Sauvegarde échouée. On réessaie bientôt,No se pudo guardar. Reintentando pronto,Não deu para salvar. Tentando de novo,Salvataggio non riuscito. Riprovo a breve,Не удалось сохранить. Скоро повторим,Kaydedilemedi. Birazdan tekrar denenecek
+SHOP_AD_DONE,今日已领完,Come back tomorrow,今日已領完,また明日,내일 또 와요,Morgen wieder,Reviens demain,Vuelve mañana,Volte amanhã,Torna domani,Приходи завтра,Yarın gel
+SHOP_AD_LEFT,今日 %d/%d,Today %d/%d,今日 %d/%d,今日 %d/%d,오늘 %d/%d,Heute %d/%d,Auj. %d/%d,Hoy %d/%d,Hoje %d/%d,Oggi %d/%d,Сегодня %d/%d,Bugün %d/%d
+SHOP_FREE_COINS,免费金币,Free Coins,免費金幣,無料コイン,무료 코인,Gratis-Münzen,Pièces gratuites,Monedas gratis,Moedas grátis,Monete gratis,Монеты даром,Bedava altın
+SIGNIN_BIG_CHEST,大宝箱,Big chest,大寶箱,大きな宝箱,큰 상자,Große Truhe,Gros coffre,Cofre grande,Baú grande,Forziere grande,Большой сундук,Büyük sandık
+SIGNIN_CHEST,宝箱,Chest,寶箱,宝箱,상자,Truhe,Coffre,Cofre,Baú,Forziere,Сундук,Sandık
+SKILL_AD,+1,+1,+1,+1,+1,+1,+1,+1,+1,+1,+1,+1
+SKILL_BUY_TITLE,购买%s,Get %s,購買%s,%sを買う,%s 받기,%s holen,Obtenir : %s,Conseguir %s,Pegar %s,Ottieni %s,Получить: %s,%s al
+SKILL_LOCKED,第 %d 关解锁,Level %d,第 %d 關解鎖,Lv.%d,레벨 %d,Level %d,Niveau %d,Nivel %d,Nível %d,Livello %d,Ур. %d,Seviye %d
+TAP_CONTINUE,继续,Continue,繼續,つづける,계속,Weiter,Continuer,Continuar,Continuar,Continua,Дальше,Devam
+TASK_CARD_MIN,%s以上,%s+,%s以上,%s以上,%s 이상,%s+,%s+,%s+,%s+,%s+,%s+,%s+
+TASK_CHEST_DAY,每日宝箱,Daily Chest,每日寶箱,デイリー宝箱,일일 상자,Tagestruhe,Coffre du jour,Cofre diario,Baú diário,Forziere giornaliero,Сундук дня,Günlük sandık
+TASK_CHEST_WEEK,每周宝箱,Weekly Chest,每週寶箱,ウィークリー宝箱,주간 상자,Wochentruhe,Coffre de la semaine,Cofre semanal,Baú semanal,Forziere settimanale,Сундук недели,Haftalık sandık
+TASK_GO,前往,Go,前往,GO,가기,Los,Go,Ir,Ir,Vai,Вперёд,Git
+TASK_NAME_AD,看广告 ×%d,Watch ads ×%d,看廣告 ×%d,広告を見る ×%d,광고 보기 ×%d,Werbung ×%d,Regarder %d pubs,Ver anuncios ×%d,Assista anúncios ×%d,Guarda video ×%d,Реклама ×%d,Reklam izle ×%d
+TASK_NAME_CLEAR,消除 %d 组,Clear %d sets,消除 %d 組,%d セット消す,%d세트 없애기,%d Sets abräumen,Élimine %d séries,Elimina %d grupos,Elimine %d grupos,Elimina %d gruppi,Убери %d наборов,%d set temizle
+TASK_NAME_COMBO,达成 %d 连击,Get a %d combo,達成 %d 連擊,%dコンボ達成,%d 콤보 달성,Combo ×%d schaffen,Faire un combo de %d,Haz un combo de %d,Faça um combo de %d,Fai una combo da %d,Комбо ×%d,%d kombo yap
+TASK_NAME_DAILY,每日挑战 ×%d,Play Daily ×%d,每日挑戰 ×%d,デイリー ×%d,데일리 ×%d,Tagesrätsel ×%d,Défi du jour ×%d,Reto diario ×%d,Desafio diário ×%d,Sfida del giorno ×%d,Задача дня ×%d,Günün bulmacası ×%d
+TASK_NAME_PLAY,玩 %d 局,Play %d games,玩 %d 局,%d回プレイ,%d판 플레이,%d Runden spielen,Jouer %d parties,Juega %d partidas,Jogue %d partidas,Gioca %d partite,Сыграй раз: %d,%d oyun oyna
+TASK_NAME_SKILL,用道具 ×%d,Use boosters ×%d,用道具 ×%d,アイテム ×%d,아이템 사용 ×%d,Extras ×%d,Utiliser %d bonus,Usa potenciadores ×%d,Use reforços ×%d,Usa aiuti ×%d,Бонусы ×%d,Güçlendirici ×%d
+TASK_NAME_WHEEL,抽奖 ×%d,Open chests ×%d,抽獎 ×%d,宝箱 ×%d,보물상자 ×%d,Truhen ×%d,Ouvrir %d coffres,Abre cofres ×%d,Abra baús ×%d,Apri forzieri ×%d,Сундуки ×%d,Sandık aç ×%d
+TASK_NAME_WIN,过 %d 关,Win %d levels,過 %d 關,%dステージクリア,레벨 %d개 클리어,%d Level schaffen,Réussir %d niveaux,Supera %d niveles,Passe %d fases,Supera %d livelli,Пройди уровни: %d,%d seviye geç
+TASK_TAB_DAY,每日,Daily,每日,毎日,일일,Tag,Jour,Día,Dia,Oggi,День,Günlük
+TASK_TAB_WEEK,每周,Weekly,每週,毎週,주간,Woche,Semaine,Semana,Semana,7 giorni,Неделя,Haftalık
+TASK_TITLE,任务,Tasks,任務,クエスト,미션,Aufgaben,Missions,Misiones,Missões,Missioni,Задания,Görevler
+TEN_REWARD,十连奖励,×10 Rewards,十連獎勵,10回分の報酬,10회 보상,×10 Belohnung,Récompenses ×10,Premios ×10,Prêmios ×10,Premi ×10,Награды ×10,×10 ödül
+TIP_RULE,点没被压住的块，同样的三个会消掉；暂存槽满了就输了,Tap tiles that aren’t covered. Three of a kind clear. Don’t let the tray fill up!,點沒被壓住的塊，同樣的三個會消掉；暫存槽滿了就輸了,上に何も乗っていないタイルをタップ。同じ3つで消えるよ。トレイがいっぱいになったら負け！,위에 가려지지 않은 타일을 누르세요. 같은 3개가 모이면 사라져요. 칸이 꽉 차면 실패!,Tippe freie Steine an. Drei gleiche verschwinden. Lass die Ablage nicht volllaufen!,Touche les tuiles libres. Trois identiques disparaissent. Ne remplis pas le plateau !,Toca las fichas libres. Tres iguales desaparecen. ¡No llenes la bandeja!,Toque nas peças livres. Três iguais somem. Não deixe a bandeja encher!,Tocca le tessere libere. Tre uguali spariscono. Non riempire il vassoio!,Нажимай на открытые фишки. Три одинаковые исчезают. Не дай лотку заполниться!,Açık taşlara dokun. Üç aynı taş kaybolur. Tepsiyi doldurma!
+UI_AD_TEST,广告测试,Ad test,廣告測試,広告テスト,광고 테스트,Werbetest,Test pub,Prueba de anuncios,Teste de anúncios,Test pubblicità,Тест рекламы,Reklam testi
+UI_AD_UNAVAILABLE,暂无广告,No ads right now,暫無廣告,広告を準備中です,지금은 광고가 없어요,Gerade keine Werbung,Pas de pub pour l’instant,Ahora no hay anuncios,Sem anúncios agora,Nessuna pubblicità ora,Сейчас нет рекламы,Şu an reklam yok
+UI_BANNER_COINS,过关得 %d 金币,Clear it for %d coins,過關得 %d 金幣,クリアで %d コイン,클리어 보상 %d 코인,Belohnung: %d Münzen,Récompense : %d pièces,Premio: %d monedas,Prêmio: %d moedas,Premio: %d monete,Награда: %d монет,Ödül: %d altın
+UI_BANNER_HARD,困难关卡！,Hard Level!,困難關卡！,ハードステージ！,어려운 레벨!,Schweres Level!,Niveau difficile !,¡Nivel difícil!,Fase difícil!,Livello difficile!,Сложный уровень!,Zor seviye!
+UI_BANNER_SUPER,超难关卡！,Super Hard Level!,超難關卡！,超ハードステージ！,매우 어려운 레벨!,Superschweres Level!,Niveau très difficile !,¡Nivel muy difícil!,Fase muito difícil!,Livello molto difficile!,Очень сложный уровень!,Çok zor seviye!
+UI_CARD_OWNED,重复卡，换成,Duplicate →,重複卡，換成,ダブり →,중복 →,Doppelt →,Doublon →,Repetida →,Repetida →,Doppione →,Повтор →,Tekrar kart →
+UI_CHALLENGE_TAG,困难,Hard,困難,ハード,어려움,Schwer,Difficile,Difícil,Difícil,Difficile,Сложно,Zor
+UI_CLAIM,领取,Claim,領取,受け取る,받기,Holen,Prendre,Recoger,Pegar,Prendi,Забрать,Al
+UI_CLAIMED,已领取,Claimed,已領取,受け取り済み,받음,Erhalten,Reçu,Recogido,Recebido,Preso,Получено,Alındı
+UI_CLAIM_DOUBLE,双倍,2x,雙倍,2倍,2배,2x,x2,x2,2x,x2,x2,2x
+UI_COMBO_CARD,连击送卡！,Combo card!,連擊送卡！,コンボでカード！,콤보 카드!,Combo-Karte!,Carte combo !,¡Carta combo!,Carta de combo!,Carta combo!,Карта за комбо!,Kombo kartı!
+UI_COMBO_T1,不错！,Good!,不錯！,いいね！,좋아요!,Gut!,Bien !,¡Bien!,Boa!,Bene!,Неплохо!,İyi!
+UI_COMBO_T2,漂亮！,Nice!,漂亮！,ナイス！,멋져요!,Klasse!,Joli !,¡Genial!,Show!,Grande!,Отлично!,Harika!
+UI_COMBO_T3,太强了！,Awesome!,太強了！,すごい！,대단해요!,Super!,Génial !,¡Increíble!,Incrível!,Fantastico!,Супер!,Muhteşem!
+UI_COMBO_T4,无敌！,Unstoppable!,無敵！,無敵！,무적!,Unschlagbar!,Inarrêtable !,¡Imparable!,Imparável!,Inarrestabile!,Не остановить!,Durdurulamaz!
+UI_COMBO_WORD,连击,COMBO,連擊,コンボ,콤보,COMBO,COMBO,COMBO,COMBO,COMBO,КОМБО,KOMBO
+UI_FULL,已满,Full,已滿,満タン,가득 참,Voll,Plein,Lleno,Cheio,Pieno,Полно,Dolu
+UI_HINT_EMPTY,现在没有能点的,No move to show,現在沒有能點的,今は取れるものがない,지금은 누를 게 없어요,Gerade kein Zug möglich,Aucun coup possible,No hay jugada posible,Sem jogada possível,Nessuna mossa possibile,Сейчас нет хода,Şu an hamle yok
+UI_LEVEL,第 %d 关,Level %d,第 %d 關,ステージ %d,레벨 %d,Level %d,Niveau %d,Nivel %d,Nível %d,Livello %d,Уровень %d,Seviye %d
+UI_LOSE,闯关失败,Level Failed,闖關失敗,失敗…,실패,Verloren,Perdu !,¡Fallaste!,Não deu!,Peccato!,Не вышло,Olmadı!
+UI_LOSE_TIMEOUT,时间到了,Time's up,時間到了,時間切れ,시간 초과,Zeit um,Temps écoulé,Se acabó el tiempo,Acabou o tempo,Tempo scaduto,Время вышло,Süre bitti
+UI_LOSE_TRAY,槽位满了,Slots full,槽位滿了,待機マスがいっぱい,대기 칸이 꽉 찼어요,Ablage voll,Cases pleines,Casillas llenas,Espaços cheios,Caselle piene,Ячейки заняты,Bölmeler dolu
+UI_MINUTES,%d 分钟,%d min,%d 分鐘,%d分,%d분,%d Min.,%d min,%d min,%d min,%d min,%d мин,%d dk
+UI_NEXT_LEVEL,下一关,Next,下一關,次へ,다음,Weiter,Suivant,Siguiente,Próximo,Avanti,Дальше,Sonraki
+UI_NO_COINS,金币不足,Out of Coins,金幣不足,コイン不足,코인 부족,Zu wenig Münzen,Plus de pièces,Faltan monedas,Sem moedas,Niente monete,Мало монет,Altın yetersiz
+UI_OWNED,已有 %d,Owned %d,已有 %d,所持 %d,보유 %d,Hast %d,Tu as %d,Tienes %d,Tem %d,Ne hai %d,Есть %d,Sende %d
+UI_PLAY,开始,Play,開始,スタート,시작,Spielen,Jouer,Jugar,Jogar,Gioca,Играть,Oyna
+UI_PRIVACY_OPTIONS,隐私选项,Privacy Options,隱私選項,プライバシー設定,개인정보 설정,Datenschutz,Confidentialité,Privacidad,Privacidade,Privacy,Конфиденциальность,Gizlilik
+UI_PRIVACY_POLICY,隐私政策,Privacy Policy,隱私權政策,プライバシーポリシー,개인정보 처리방침,Datenschutzerklärung,Politique de confidentialité,Política de privacidad,Política de privacidade,Informativa privacy,Политика конфиденциальности,Gizlilik politikası
+UI_RARITY_COMMON,普通,Common,普通,コモン,일반,Normal,Commun,Común,Comum,Comune,Обычная,Sıradan
+UI_RARITY_EPIC,史诗,Epic,史詩,エピック,영웅,Episch,Épique,Épico,Épico,Epico,Эпическая,Destansı
+UI_RARITY_LEGEND,传说,Legend,傳說,レジェンド,전설,Legendär,Légendaire,Legendario,Lendário,Leggendario,Легенда,Efsanevi
+UI_RARITY_RARE,稀有,Rare,稀有,レア,희귀,Selten,Rare,Raro,Raro,Raro,Редкая,Nadir
+UI_RARITY_UNCOMMON,精良,Uncommon,精良,アンコモン,고급,Besonders,Peu commun,Poco común,Incomum,Non comune,Необычная,Seçkin
+UI_REPLAY_NO_REWARD,今日重玩奖励已领完,No rewards left today,今日重玩獎勵已領完,今日の再挑戦ボーナスは終了,오늘 재도전 보상은 끝났어요,Heute keine Belohnung mehr,Plus de récompense aujourd’hui,Hoy ya no hay premios,Sem prêmios por hoje,Niente premi per oggi,Награды на сегодня кончились,Bugünlük ödül kalmadı
+UI_SETTINGS,设置,Settings,設定,設定,설정,Optionen,Réglages,Ajustes,Ajustes,Impostazioni,Настройки,Ayarlar
+UI_SHUFFLE_EMPTY,现在不能洗牌,Can't shuffle now,現在不能洗牌,今はシャッフルできない,지금은 섞을 수 없어요,Mischen geht gerade nicht,Impossible de mélanger,Ahora no se puede mezclar,Não dá para embaralhar agora,Ora non puoi mescolare,Сейчас нельзя перемешать,Şu an karıştırılamaz
+UI_SIGNIN,签到,Daily Gift,簽到,ログボ,출석,Tagesbonus,Cadeau du jour,Regalo diario,Presente diário,Regalo del giorno,Подарок дня,Günlük hediye
+UI_SIGNIN_DAY,第 %d 天,Day %d,第 %d 天,%d日目,%d일차,Tag %d,Jour %d,Día %d,Dia %d,Giorno %d,День %d,%d. gün
+UI_SKILL_FREE,FREE,FREE,FREE,FREE,FREE,GRATIS,GRATUIT,GRATIS,GRÁTIS,GRATIS,FREE,BEDAVA
+UI_SKILL_TRY,新道具：%s,New booster: %s,新道具：%s,新アイテム：%s,새 아이템: %s,Neues Extra: %s,Nouveau bonus : %s,Nuevo potenciador: %s,Novo reforço: %s,Nuovo aiuto: %s,Новый бонус: %s,Yeni güçlendirici: %s
+UI_TAB_COLLECTION,收藏,Album,收藏,図鑑,도감,Album,Album,Álbum,Álbum,Album,Альбом,Albüm
+UI_TAB_DAILY,每日挑战,Daily,每日挑戰,デイリー,데일리,Täglich,Défi,Diario,Diário,Sfida,Задача,Günlük
+UI_TAB_SHOP,商店,Shop,商店,ショップ,상점,Shop,Boutique,Tienda,Loja,Negozio,Магазин,Mağaza
+UI_TAB_TASKS,任务,Tasks,任務,クエスト,미션,Aufgaben,Missions,Misiones,Missões,Missioni,Задания,Görevler
+UI_TAG_SUPER,超难,Super Hard,超難,超ハード,매우 어려움,Superschwer,Très difficile,Muy difícil,Muito difícil,Molto difficile,Очень сложно,Çok zor
+UI_TOOL_LIMIT,本关已用完,Used up this level,本關已用完,このステージでは使い切り,이 레벨에선 다 썼어요,In diesem Level aufgebraucht,Épuisé pour ce niveau,Agotado en este nivel,Esgotado nesta fase,Esaurito in questo livello,На этом уровне всё,Bu seviyede bitti
+UI_UNDO_EMPTY,没有能撤销的一步,Nothing to undo,沒有能復原的一步,もどせる手がない,되돌릴 수가 없어요,Nichts zum Zurücknehmen,Rien à annuler,Nada que deshacer,Nada para desfazer,Niente da annullare,Нечего отменять,Geri alınacak hamle yok
+UI_UNKNOWN,？？？,???,？？？,？？？,???,???,???,???,???,???,???,???
+WIN_DOUBLE,领双倍,Get x2,領雙倍,2倍GET,2배 받기,x2 holen,Prendre x2,Cobrar x2,Pegar x2,Prendi x2,Взять x2,2 kat al
+WIN_TITLE,通关成功,Level Clear!,通關成功,クリア！,클리어!,Geschafft!,Réussi !,¡Superado!,Passou!,Superato!,Пройдено!,Başardın!

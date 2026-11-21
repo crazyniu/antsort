@@ -1,0 +1,71 @@
+{
+ "_comment": "示例玩法的关卡参数（core/demo/level.ts 按它现场生成关卡，保证可解）。换玩法时换成自己的参数或关卡文件，见 docs/02",
+ "total": 120,
+ "hardEvery": 5,
+ "bossEvery": 20,
+ "tray": 7,
+ "segments": [
+  {
+   "from": 1,
+   "kinds": [
+    3,
+    4
+   ],
+   "sets": [
+    1,
+    1
+   ],
+   "layers": 1
+  },
+  {
+   "from": 6,
+   "kinds": [
+    4,
+    6
+   ],
+   "sets": [
+    1,
+    2
+   ],
+   "layers": 2
+  },
+  {
+   "from": 21,
+   "kinds": [
+    6,
+    8
+   ],
+   "sets": [
+    2,
+    2
+   ],
+   "layers": 3
+  },
+  {
+   "from": 61,
+   "kinds": [
+    8,
+    10
+   ],
+   "sets": [
+    2,
+    3
+   ],
+   "layers": 3
+  }
+ ],
+ "hard": {
+  "kindsPlus": 1,
+  "setsPlus": 0
+ },
+ "boss": {
+  "kindsPlus": 2,
+  "setsPlus": 1
+ },
+ "easeKinds": 1,
+ "clock": {
+  "from": 10,
+  "perTile": 2.2,
+  "min": 40
+ }
+}

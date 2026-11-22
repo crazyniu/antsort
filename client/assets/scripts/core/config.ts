@@ -162,7 +162,7 @@ export interface EconomyConfig {
     freeDaily?: number;
     /** 第 1 关到第几关（含）：每关第一次用技能免费（没配 = 没有这一条） */
     freeLevelUntil?: number;
-    /** 第 1 关到第几关（含）：技能随便用、都免费（每种每关仍按次数上限；2026-11-19，docs/01） */
+    /** 第 1 关到第几关（含）：技能随便用、都免费（每种每关仍按次数上限，docs/01） */
     freeAllUntil?: number;
     /** 第一次过了第 after 关送礼包：已解锁的每种技能各 count 个，告诉玩家「从下一关起要用库存或金币了」 */
     gift?: { after: number; count: number };

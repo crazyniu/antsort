@@ -20,7 +20,7 @@ OUT = Path(__file__).resolve().parents[2] / "assets" / "resources" / "audio"
 PICK = {
     "error": ("error_004.ogg", 0.7),  # 点了没用 / 金币不够
     "card": ("card-slide-1.ogg", 0.85),
-    "shuffle": ("card-shuffle.ogg", 0.8, 1.0),  # 洗牌动画约 1 秒（2026-11-17：原来 3 秒，动画停了还在响）
+    "shuffle": ("card-shuffle.ogg", 0.8, 1.0),  # 洗牌动画约 1 秒（素材原长 3 秒，截短免得动画停了还在响）
     "warn": ("question_001.ogg", 0.7),
     "tick": ("tick_002.ogg", 0.6),
     "swell": ("maximize_009.ogg", 0.7),

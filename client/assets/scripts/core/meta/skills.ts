@@ -66,7 +66,7 @@ export function freeAvailable(save: SaveData, id: string, eco?: EconomyConfig): 
 }
 
 /**
- * 这一关用技能免不免费（docs/01；前面的关卡金币不够，玩不下去；2026-11-19：花钱往前移，15 关开始）：
+ * 这一关用技能免不免费（docs/01：前面的关卡金币不够会玩不下去，所以前几关免费）：
  * - 第 1 关到 skills.freeAllUntil 关：随便用、都免费（每种每关的次数上限照旧）
  * - 到 skills.freeLevelUntil 关：每关第一次用（不分种类）免费
  * 免费的不扣库存、不记每天的免费次。usedAllThisLevel 是本关各种技能合计已用几次（界面层记，不传 = -1 = 不算这一条）；

@@ -86,7 +86,7 @@ const REWARD = /^(skin\/j_(card_|medal_)|icon\/chest)/;
 
 /**
  * 首页出来之前要读好的界面图：部件、按钮、图标和首页背景（约 1.5 MB）。原来界面图全部读完才进首页（约 6.5 MB），
- * 4G 下微信版冷启动二十几秒（2026-11-21 在 Mac 上按 CPU 4 倍慢、9 Mbps 量的）。卡面不在这里，由 Boot 另读。
+ * 4G 下微信版冷启动二十几秒（按 CPU 4 倍慢、9 Mbps 网速量的）。卡面不在这里，由 Boot 另读。
  * 首页背景原来是用到时才读，现在要和后台那几 MB 抢网速，网慢时会空好几秒，所以放进来
  */
 export function startupFrames(): string[] {

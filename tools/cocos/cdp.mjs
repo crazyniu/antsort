@@ -5,7 +5,7 @@
 //       node tools/cocos/cdp.mjs shot <输出.jpg> [x,y,w,h]  按 2 倍屏截图（可只截一块，比例 0~1）
 //       node tools/cocos/cdp.mjs burst <目录> <张数> <间隔毫秒> '<JS>'  执行 JS 后连拍（看动画）
 //       node tools/cocos/cdp.mjs watch [日志文件]   盯着页面：每 2 秒问一声，超过 4 秒没回应（卡死）就暂停、记下正在执行的调用栈（连记 3 次），再放行；
-//                                                控制台的异常也记下来。一直跑到 Ctrl+C（2026-11-20：查游戏偶尔卡死、一直响刺耳的声音）
+//                                                控制台的异常也记下来。一直跑到 Ctrl+C（查偶尔卡死、一直响刺耳声音这类问题用）
 // 只用 Node 自带的 fetch / WebSocket，不装东西。
 const PORT = Number(process.env.CDP_PORT ?? 9333);
 const [cmd = 'logs', arg = '6'] = process.argv.slice(2);

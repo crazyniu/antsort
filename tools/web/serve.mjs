@@ -1,5 +1,5 @@
 // 内网试玩用的静态文件服务（./run.sh lan）。Python 自带的 http.server 排队只有 5 个，别的设备一次要几十个文件时
-// 会被重置连接、缺图缺声音（2026-11-20 从另一台机器访问时发现），所以内网模式用这个。只用 Node 自带的模块。
+// 会被重置连接、缺图缺声音（从另一台机器访问时会这样），所以内网模式用这个。只用 Node 自带的模块。
 // 用法：node tools/web/serve.mjs <目录> <端口> [绑定地址，默认 0.0.0.0]
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';

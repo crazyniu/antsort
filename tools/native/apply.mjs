@@ -131,7 +131,7 @@ if (existsSync(ios)) {
   const strings = (lang) =>
     `/* 由 tools/native/apply.mjs 按 game.json 生成 */\n"CFBundleDisplayName" = "${game.name[lang]}";\n` +
     (adsOn ? `"NSUserTrackingUsageDescription" = "${game.ios.trackingText[lang]}";\n` : '');
-  // 各语言的 InfoPlist.strings 由 CMakeLists 构建完拷进 .app（GAME_LPROJ 列目录；Cocos 的模板不带它们，2026-11-19 以前的中文应用名因此没进包）
+  // 各语言的 InfoPlist.strings 由 CMakeLists 构建完拷进 .app（GAME_LPROJ 列目录；Cocos 的模板不带它们，不拷的话各语言的应用名进不了包）
   const lproj = ['Base', ...appLangs.map((l) => LOCALES[l].ios)].join(' ');
   // 工程名：Cocos 构建时也会这样改写，先写好免得每次构建都有改动；GAME_ADS：链不链广告 SDK
   edit(join(ios, 'CMakeLists.txt'), (s) =>

@@ -30,7 +30,7 @@ FONT = CLIENT / "assets/boot/game.ttf"
 FULL_FONT = ROOT / "art/raw/fonts/KNMaiyuan-Regular.ttf"
 FULL_FONT_URL = "https://github.com/maoken-fonts/KNMaiyuan/releases"
 # 游戏字体要的字：ASCII 以外的全部字符（中日文、拉丁字母的附加符号、西里尔字母），韩文除外——荆南麦圆体没有韩文，
-# 韩文另裁一份资源圆体韩文版（见 KO_*）。2026-11-19 加日韩、欧洲语言和繁体（docs/10 第 8 节）
+# 韩文另裁一份资源圆体韩文版（见 KO_*）。语言清单见 docs/10 第 8 节
 NON_ASCII = re.compile(r"[^\x00-\x7e]")
 HANGUL = re.compile(r"[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]")
 # 字符串字面量；行尾 // 注释（前面不是 : 免得切掉 https://）和整行 * 注释先去掉

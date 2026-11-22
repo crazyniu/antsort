@@ -22,7 +22,7 @@ import { Page, headBottom, pageHead, ui } from '../ui/shell';
 export function spinItem(r: Wheel.SpinResult): PrizeItem {
   if (r.card) return cardItem(r.card);
   if (r.kind === 'coins') return { icon: 'icon/coin', amount: fmt(r.coins), name: tr('PRIZE_COINS') };
-  if (r.kind === 'skill') return { icon: skillIcon(r.skill || 'shuffle'), amount: '×1', name: skillName(r.skill || 'shuffle') };
+  if (r.kind === 'skill') return { icon: skillIcon(r.skill || 'slot'), amount: '×1', name: skillName(r.skill || 'slot') };
   if (r.kind === 'unlimited') return { icon: 'icon/heart_inf', amount: tr('UI_MINUTES', Math.round(r.unlimited / 60)) };
   return { icon: 'icon/gift', amount: '' };
 }
@@ -35,8 +35,8 @@ const SHOWCASE: [string, number, number, number, number][] = [
   ['icon/coin', 152, 128, 78, 78],
   ['icon/card_back', 90, 136, 62, 83],
   ['icon/heart_inf', 28, 128, 80, 80],
-  ['icon/skill_shuffle', 205, 108, 74, 74],
-  ['icon/skill_undo', -25, 108, 74, 74],
+  ['icon/skill_slot', 205, 108, 74, 74],
+  ['icon/skill_shunt', -25, 108, 74, 74],
 ];
 /** 蓄力的 9 拍（秒），和 wheel_charge 音效里的 9 个音对齐（client/tools/audio/kenney.py） */
 const BEATS = [0, 0.19, 0.35, 0.49, 0.61, 0.71, 0.8, 0.88, 0.95];

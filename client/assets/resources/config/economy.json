@@ -5,19 +5,17 @@
  "bossCoins": 90,
  "adCoinMultiplier": 2,
  "toolStart": {
-  "undo": 0,
-  "hint": 0,
-  "shuffle": 0
+  "slot": 0,
+  "shunt": 0,
+  "xray": 0
  },
  "toolPrice": {
-  "undo": 100,
-  "hint": 120,
-  "shuffle": 100
+  "slot": 120,
+  "shunt": 100,
+  "xray": 80
  },
  "toolMaxFree": 2,
- "toolMaxFreeById": {
-  "undo": 3
- },
+ "toolMaxFreeById": {},
  "stars": {
   "twoStarLine": {
    "normal": 1,
@@ -110,9 +108,9 @@
  },
  "skills": {
   "order": [
-   "undo",
-   "hint",
-   "shuffle"
+   "slot",
+   "shunt",
+   "xray"
   ],
   "grantOnUnlock": 1,
   "freePerDay": 1,
@@ -212,7 +210,7 @@
  "tasks": {
   "fixed": [
    "win",
-   "clear",
+   "depart",
    "ad"
   ],
   "random": 3,
@@ -225,8 +223,8 @@
     "points": 30
    },
    {
-    "id": "clear",
-    "goal": 30,
+    "id": "depart",
+    "goal": 20,
     "points": 20
    },
    {
@@ -250,7 +248,7 @@
     "id": "skill",
     "goal": 1,
     "points": 20,
-    "feature": "skill_shuffle"
+    "feature": "skill_slot"
    },
    {
     "id": "daily",
@@ -324,9 +322,9 @@
  },
  "features": {
   "signin": 3,
-  "skill_undo": 2,
-  "skill_hint": 4,
-  "skill_shuffle": 6,
+  "skill_slot": 4,
+  "skill_shunt": 8,
+  "skill_xray": 9,
   "levelSelect": 5,
   "album": 8,
   "wheel": 10,

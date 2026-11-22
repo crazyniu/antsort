@@ -13,8 +13,8 @@ import type { CardResult } from '../core/meta/save';
 import * as Settle from '../core/meta/settle';
 import * as Skills from '../core/meta/skills';
 import * as Tasks from '../core/meta/tasks';
-import { LoseReason, Status } from '../core/demo/rules';
-import * as Rules from '../core/demo/rules';
+import { LoseReason, Status } from '../core/dig/rules';
+import * as Rules from '../core/dig/rules';
 import { Rng } from '../core/rng/rng';
 import { App } from '../services/app';
 import { playMusic, sfx } from '../services/audio';
@@ -169,14 +169,20 @@ export function checkTutorial(g: GamePage): void {
     return;
   }
   if (hasEffect(g, id)) return;
+  // 玩法：先让玩家自己叫一节车、看它装完，再教新技能（一进关就压暗全屏太突然）
+  if (!g.moved || !g.quiet) return;
   const s = App.save.data;
   PlayerData.markTip(s, `skill_${id}`);
   App.save.write();
   g.startTutorial(id, () => {
-    // 强制教学这一次不算进星级的道具数（docs/01）
+    // 强制教学这一次不算进星级的道具数（docs/01）。「调车」要挑了车厢才扣，记下来到时候再算
     const before = g.usedAll;
+    tutoring = id;
     useSkill(g, id);
-    if (g.usedAll > before) g.freebies++;
+    if (g.usedAll > before) {
+      g.freebies++;
+      tutoring = '';
+    }
   });
 }
 
@@ -193,11 +199,14 @@ export function onFirstMove(g: GamePage): void {
 
 // ---------------------------------------------------------------- 技能
 
-/** 玩法：当前没有效果的技能不扣数量，返回提示的文案键；有效果返回 null */
+/** 正在强制教学、还没真正用掉的技能（「调车」挑了车厢才算用） */
+let tutoring = '';
+
+/** 玩法：当前没有效果的技能不扣数量，返回提示的文案键；有效果返回 null（docs/01 第 1.6 节） */
 export function hasEffect(g: GamePage, id: string): string | null {
-  if (id === 'undo') return g.canUndo ? null : 'UI_UNDO_EMPTY';
-  if (id === 'hint') return Rules.hint(g.s) >= 0 ? null : 'UI_HINT_EMPTY';
-  if (id === 'shuffle') return g.s.left() >= 2 ? null : 'UI_SHUFFLE_EMPTY';
+  if (id === 'slot') return g.s.slotAdded ? 'UI_SLOT_EMPTY' : null;
+  if (id === 'shunt') return Rules.canShunt(g.s) ? null : 'UI_SHUNT_EMPTY';
+  if (id === 'xray') return g.s.hasHidden() ? null : 'UI_XRAY_EMPTY';
   return null;
 }
 
@@ -211,28 +220,51 @@ export function useSkill(g: GamePage, id: string): void {
     sfx('error');
     return;
   }
+  // 正在挑「调车」的车厢时再点技能键：取消
+  if (g.isPicking) {
+    g.endPick();
+    if (id === 'shunt') return;
+  }
   const none = hasEffect(g, id);
   if (none) {
     ui.toast(tr(none));
     return;
   }
   const used = g.used[id] ?? 0;
-  const r = Skills.tryUse(s, eco, id, used, today(), g.freeLevelId, g.usedAll);
-  if (!r.ok) {
-    if (r.reason === 'limit') ui.toast(tr('UI_TOOL_LIMIT'));
-    else if (r.reason === 'empty') buySkill(g, id);
+  /** 扣一个（免费次、库存），扣不了提示或弹购买 */
+  const pay = (): boolean => {
+    const r = Skills.tryUse(s, eco, id, g.used[id] ?? 0, today(), g.freeLevelId, g.usedAll);
+    if (!r.ok) {
+      if (r.reason === 'limit') ui.toast(tr('UI_TOOL_LIMIT'));
+      else if (r.reason === 'empty') buySkill(g, id);
+      return false;
+    }
+    g.used[id] = (g.used[id] ?? 0) + 1;
+    if (tutoring === id) {
+      g.freebies++;
+      tutoring = '';
+    }
+    App.save.write();
+    g.refreshSkills();
+    sfx(id);
+    return true;
+  };
+  // 玩法：各技能的效果
+  if (id === 'shunt') {
+    // 调车：先挑车厢，挑中了才扣。现在就用不了（次数用完、没库存）的先说
+    const why = Skills.canUse(s, eco, id, used, g.freeLevelId, g.usedAll);
+    if (why === 'limit') return ui.toast(tr('UI_TOOL_LIMIT'));
+    if (why === 'empty') return buySkill(g, id);
+    g.startPick((track, index) => {
+      if (!pay()) return g.endPick();
+      g.endPick();
+      g.doTap(track, index);
+    });
     return;
   }
-  g.used[id] = used + 1;
-  App.save.write();
-  g.refreshSkills();
-  sfx(id);
-  // 玩法：各技能的效果
-  if (id === 'undo') {
-    g.undo();
-    g.refreshSkills();
-  } else if (id === 'hint') g.showSkillHint();
-  else if (id === 'shuffle') g.act(() => Rules.useShuffle(g.s, rng.nextU32()));
+  if (!pay()) return;
+  if (id === 'slot') g.act(() => Rules.useSlot(g.s));
+  else if (id === 'xray') g.xray();
 }
 
 /** 数量为 0：金币买，金币不够则看广告得 1 个（docs/01）；这一版没有广告时只有金币买，弹窗矮一截 */
@@ -347,7 +379,7 @@ function endRun(g: GamePage): void {
   g.tallied = true;
   const eco = App.config.eco;
   // 玩法：每日任务的计数（任务 id 在 economy.json 的 tasks.pool）
-  Tasks.add(s, eco, today(), 'clear', g.cleared);
+  Tasks.add(s, eco, today(), 'depart', g.departed);
   Tasks.add(s, eco, today(), 'combo', g.combo.best);
   Tasks.add(s, eco, today(), 'play');
 }
@@ -378,11 +410,11 @@ export function comboCard(g: GamePage): void {
 
 /** 玩法：失败原因 → 失败页、复活页的文案 */
 const LOSE_KEY: Record<number, string> = {
-  [LoseReason.TRAY_FULL]: 'UI_LOSE_TRAY',
+  [LoseReason.JAM]: 'UI_LOSE_JAM',
   [LoseReason.CLOCK]: 'UI_LOSE_TIMEOUT',
 };
 const REVIVE_KEY: Record<number, string> = {
-  [LoseReason.TRAY_FULL]: 'REVIVE_TRAY',
+  [LoseReason.JAM]: 'REVIVE_JAM',
   [LoseReason.CLOCK]: 'REVIVE_CLOCK',
 };
 
@@ -424,7 +456,7 @@ function revivePopup(g: GamePage): void {
       p.close();
       g.paused = false;
       g.extras++;
-      Rules.revive(g.s);
+      Rules.revive(g.s, App.config.levels.reviveSeconds);
       g.resync();
     },
   });

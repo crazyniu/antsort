@@ -27,10 +27,10 @@ const CARD_MAX_H = 280;
 /** 每项任务的图标、「前往」去哪 */
 const TASK_ICON: Record<string, string> = {
   win: 'icon/task_win',
-  clear: 'icon/star',
+  depart: 'icon/star',
   ad: 'icon/task_ad',
   combo: 'icon/task_combo',
-  skill: 'icon/skill_shuffle',
+  skill: 'icon/skill_slot',
   daily: 'icon/entry_daily',
   wheel: 'icon/entry_wheel',
   play: 'icon/entry_levels',

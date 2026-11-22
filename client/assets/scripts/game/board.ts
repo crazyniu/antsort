@@ -1,106 +1,197 @@
-// 示例玩法的场地（换玩法时换掉这个文件和 core/demo，见 docs/02）：把一关的块摆出来、点块、被压住的压暗。
-// 只管画和点，不管规则：点了调 onTap(块号)，规则在 core/demo/rules.ts，结果由 GamePage 按事件播。
-import { Color, Node, Tween, Vec3, tween } from 'cc';
-import type { DemoLevel } from '../core/demo/level';
-import type { GameState } from '../core/demo/rules';
+// 料场（docs/01 第 1.2、1.3 节）：把拼豆画摆出来，每个位置只画最上面那颗豆；被挖走时缩掉、露出下面的。
+// 只管画，不管规则：能不能挖、挖哪颗都由 core/dig/rules.ts 算，局内页面按事件调 dig()。
+// 这里自己留一份「画面上的豆」：规则是当场算完的，画面慢慢播，两边不同步。
+import { Color, Node, Sprite, Tween, Vec3, tween } from 'cc';
+import { DigLevel, STONE } from '../core/dig/level';
+import type { GameState } from '../core/dig/rules';
 import * as fx from '../ui/fx';
-import { at, box, img, onTap, opacity, setImg, slice, tint } from '../ui/kit';
+import { at, box, hex, img, opacity, size, slice } from '../ui/kit';
 
-/** 被压住的块盖一层多深的影子 */
-const SHADE = new Color(10, 30, 80, 255);
-const SHADE_OPACITY = 120;
-/** 块的皮（白色圆角卡片）比图案大多少 */
-const PAD = 0.14;
+/** 一格最大多大（设计单位） */
+const CELL_MAX = 62;
+/** 豆、豆眼占一格的多少；两层以上的豆大一圈 */
+const BEAD = 0.9;
+const BEAD_TALL = 0.99;
+const HOLE = 0.32;
+const STONE_COLOR = new Color(141, 147, 156, 255);
 
-export interface TileView {
-  node: Node;
-  art: Node;
-  shade: Node;
+function darker(c: Color, k: number): Color {
+  return new Color(Math.round(c.r * k), Math.round(c.g * k), Math.round(c.b * k), 255);
 }
 
 export class Board {
   readonly node: Node;
-  views: TileView[] = [];
-  /** 一块的边长（设计单位） */
-  size = 100;
-  private lv: DemoLevel;
-  private frames: string[];
+  /** 一格的边长（设计单位） */
+  readonly cell: number;
+  /** 颜色编号 → 颜色 */
+  readonly colors: Color[];
+  private holeColors: Color[];
+  private shadeColors: Color[];
+  /** 画面上每个位置从下到上的豆（开局、重画时从局面抄一份） */
+  private cols: number[][] = [];
+  private shadeL: Node;
+  private xrayL: Node;
+  private beadL: Node;
+  private holeL: Node;
+  private beads: Node[] = [];
+  private holes: Node[] = [];
+  private shades: Node[] = [];
+  private stones = new Map<number, Node>();
+  private xrays = new Map<number, Node>();
 
-  /**
-   * parent 里 w × h 的一块地方；frames[图案号] = 这种图案用哪张图；onTap(块号)
-   */
-  constructor(parent: Node, w: number, h: number, lv: DemoLevel, frames: string[], private onTapTile: (i: number) => void) {
-    this.node = box('board', parent, w, h);
-    this.lv = lv;
-    this.frames = frames;
-    this.size = Math.min(124, ((w - 20) / lv.spanX) * 2, ((h - 20) / lv.spanY) * 2);
+  /** parent 里 w × h 的一块地方（居中摆） */
+  constructor(parent: Node, w: number, h: number, private lv: DigLevel) {
+    this.cell = Math.min(CELL_MAX, (w - 28) / lv.w, (h - 28) / lv.h);
+    this.colors = lv.palette.map((c) => hex(c));
+    this.holeColors = this.colors.map((c) => darker(c, 0.78));
+    this.shadeColors = this.colors.map((c) => darker(c, 0.56));
+    this.node = box('board', parent, lv.w * this.cell + 20, lv.h * this.cell + 20);
+    // 底板：浅色的拼豆板
+    slice(this.node, 'kit/row', lv.w * this.cell + 20, lv.h * this.cell + 20, 'plate');
+    // 分层放：同一层用同一张图，引擎才能合批
+    this.shadeL = box('shades', this.node);
+    this.xrayL = box('xray', this.node);
+    this.beadL = box('beads', this.node);
+    this.holeL = box('holes', this.node);
   }
 
-  /** 块号 → 在 board 里的位置（层越高往上提一点，看着是叠起来的） */
-  pos(i: number): Vec3 {
-    const t = this.lv.tiles[i];
-    const half = this.size / 2;
-    return new Vec3((t.x - (this.lv.spanX - 2) / 2) * half, -(t.y - (this.lv.spanY - 2) / 2) * half + t.layer * 6, 0);
+  /** 第 p 个位置的中心，在 board 节点里的坐标 */
+  pos(p: number): Vec3 {
+    const x = p % this.lv.w;
+    const y = (p - x) / this.lv.w;
+    return new Vec3((x - (this.lv.w - 1) / 2) * this.cell, ((this.lv.h - 1) / 2 - y) * this.cell, 0);
   }
 
-  /** 画出全部块（intro：依次弹出） */
+  /** 画出整张（intro：从中间往外依次弹出） */
   build(s: GameState, intro: boolean, stagger = 0.02): void {
-    this.node.destroyAllChildren();
-    this.views = [];
-    // 低层先画、高层后画，上面的盖住下面的
-    const order = this.lv.tiles.map((_, i) => i).sort((a, b) => this.lv.tiles[a].layer - this.lv.tiles[b].layer);
-    const views: TileView[] = new Array(this.lv.tiles.length);
-    const S = this.size;
-    for (const i of order) {
-      const n = slice(this.node, 'kit/panel_glass', S - 4, S - 4, `tile${i}`);
-      const p = this.pos(i);
-      at(n, p.x, p.y);
-      const art = img(n, this.frames[s.tiles[i].kind] ?? 'icon/star', S * (1 - PAD * 2), S * (1 - PAD * 2), 'art');
-      const shade = tint(n, S - 4, S - 4, SHADE, 'shade');
-      opacity(shade).opacity = SHADE_OPACITY;
-      onTap(n, () => this.onTapTile(i), { sound: null, press: 0.94 });
-      views[i] = { node: n, art, shade };
-      if (intro) fx.popIn(n, 0.1 + order.indexOf(i) * stagger, 0.25);
+    for (const l of [this.shadeL, this.xrayL, this.beadL, this.holeL]) l.destroyAllChildren();
+    this.stones.clear();
+    this.xrays.clear();
+    this.cols = s.cols.map((c) => c.slice());
+    const C = this.cell;
+    const n = this.lv.w * this.lv.h;
+    this.beads = [];
+    this.holes = [];
+    this.shades = [];
+    for (let p = 0; p < n; p++) {
+      const at0 = this.pos(p);
+      const shade = img(this.shadeL, 'kit/circle_white', C * BEAD_TALL, C * BEAD_TALL, 'shade');
+      at(shade, at0.x, at0.y - C * 0.1);
+      const bead = img(this.beadL, 'kit/circle_white', C * BEAD, C * BEAD, 'bead');
+      at(bead, at0.x, at0.y);
+      const hole = img(this.holeL, 'kit/circle_white', C * HOLE, C * HOLE, 'hole');
+      at(hole, at0.x, at0.y);
+      this.shades.push(shade);
+      this.beads.push(bead);
+      this.holes.push(hole);
+      this.render(p);
+      if (intro && this.cols[p].length > 0) {
+        const d = Math.hypot(at0.x, at0.y) / C;
+        fx.popIn(bead, 0.1 + d * stagger, 0.22);
+        fx.popIn(hole, 0.1 + d * stagger, 0.22);
+      }
     }
-    this.views = views;
-    this.refresh(s);
   }
 
-  /** 按局面刷新：不在场上的藏起来，被压住的压暗 */
-  refresh(s: GameState): void {
-    this.views.forEach((v, i) => {
-      if (!v || !v.node.isValid) return;
-      if (v.node.parent !== this.node) return; // 已经飞出去了（在暂存槽里）
-      v.node.active = s.alive[i];
-      v.shade.active = !s.free(i);
+  /** 按画面上的豆刷新第 p 个位置 */
+  private render(p: number): void {
+    const col = this.cols[p];
+    const top = col.length > 0 ? col[col.length - 1] : -1;
+    const bead = this.beads[p];
+    const hole = this.holes[p];
+    const shade = this.shades[p];
+    const C = this.cell;
+    Tween.stopAllByTarget(bead);
+    Tween.stopAllByTarget(hole);
+    bead.setScale(1, 1, 1);
+    hole.setScale(1, 1, 1);
+    opacity(bead).opacity = 255;
+    const x = this.xrays.get(p);
+    if (x) {
+      x.destroy();
+      this.xrays.delete(p);
+    }
+    let stone = this.stones.get(p);
+    if (top === STONE && !stone) {
+      stone = img(this.beadL, 'kit/round_white', C * 0.94, C * 0.94, 'stone');
+      const at0 = this.pos(p);
+      at(stone, at0.x, at0.y);
+      (stone.getComponent(Sprite) as Sprite).color = STONE_COLOR;
+      this.stones.set(p, stone);
+    }
+    if (stone) stone.active = top === STONE;
+    const isBead = top >= 0;
+    bead.active = isBead;
+    hole.active = isBead;
+    // 两层以上：豆大一圈，下面垫一圈深色，看着是摞起来的
+    const tall = isBead && col.length >= 2;
+    shade.active = tall;
+    if (!isBead) return;
+    const s0 = C * (tall ? BEAD_TALL : BEAD);
+    size(bead, s0, s0);
+    (bead.getComponent(Sprite) as Sprite).color = this.colors[top] ?? Color.WHITE;
+    (hole.getComponent(Sprite) as Sprite).color = this.holeColors[top] ?? Color.GRAY;
+    if (tall) (shade.getComponent(Sprite) as Sprite).color = this.shadeColors[top] ?? Color.GRAY;
+  }
+
+  /** 画面上这个位置最上面那颗豆的颜色编号（没有是 -1） */
+  topOf(p: number): number {
+    const col = this.cols[p];
+    return col.length > 0 ? col[col.length - 1] : -1;
+  }
+
+  /** 挖走第 p 个位置最上面的豆：缩掉，露出下面的（下面有豆就弹一下） */
+  dig(p: number): void {
+    const col = this.cols[p];
+    if (col.length === 0) return;
+    const bead = this.beads[p];
+    const hole = this.holes[p];
+    col.pop();
+    const under = col.length > 0 ? col[col.length - 1] : -1;
+    Tween.stopAllByTarget(bead);
+    Tween.stopAllByTarget(hole);
+    tween(hole).to(0.07, { scale: new Vec3(0, 0, 1) }).start();
+    tween(bead)
+      .to(0.09, { scale: new Vec3(0.2, 0.2, 1) }, { easing: 'quadIn' })
+      .call(() => {
+        this.render(p);
+        if (under >= 0) {
+          bead.setScale(0.6, 0.6, 1);
+          tween(bead).to(0.14, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' }).start();
+        }
+      })
+      .start();
+  }
+
+  /** 画面上还有被盖住的豆吗 */
+  hasHidden(): boolean {
+    return this.cols.some((col) => col.length >= 2 && col[col.length - 2] >= 0);
+  }
+
+  /** 透视：上面的豆变透明几秒，看得到正下面那颗的颜色 */
+  xray(seconds: number): void {
+    const C = this.cell;
+    this.cols.forEach((col, p) => {
+      if (col.length < 2 || col[col.length - 1] < 0 || col[col.length - 2] < 0 || this.xrays.has(p)) return;
+      const n = img(this.xrayL, 'kit/circle_white', C * BEAD, C * BEAD, 'x');
+      const at0 = this.pos(p);
+      at(n, at0.x, at0.y);
+      (n.getComponent(Sprite) as Sprite).color = this.colors[col[col.length - 2]] ?? Color.WHITE;
+      this.xrays.set(p, n);
+      const op = opacity(this.beads[p]);
+      Tween.stopAllByTarget(op);
+      tween(op).to(0.2, { opacity: 40 }).start();
+      this.holes[p].active = false;
+      this.shades[p].active = false;
     });
-  }
-
-  /** 洗牌后换图案：每块转一下再换图 */
-  reskin(s: GameState): void {
-    this.views.forEach((v, i) => {
-      if (!v || !s.alive[i]) return;
-      Tween.stopAllByTarget(v.art);
-      tween(v.art)
-        .to(0.12, { scale: new Vec3(0, 1, 1) })
-        .call(() => setImg(v.art, this.frames[s.tiles[i].kind] ?? 'icon/star', this.size * (1 - PAD * 2), this.size * (1 - PAD * 2)))
-        .to(0.12, { scale: new Vec3(1, 1, 1) })
-        .start();
+    fx.delay(this.xrayL, seconds, () => {
+      for (const p of Array.from(this.xrays.keys())) {
+        const op = opacity(this.beads[p]);
+        tween(op)
+          .to(0.2, { opacity: 255 })
+          .call(() => this.render(p))
+          .start();
+      }
     });
-  }
-
-  /** 点到被压住的块：晃一下 */
-  blocked(i: number): void {
-    const v = this.views[i];
-    if (v) fx.shake(v.node, 6);
-  }
-
-  /** 在这块上放一个提示圈，返回圈（调用方负责销毁） */
-  hint(i: number): Node | null {
-    const v = this.views[i];
-    if (!v || !v.node.active) return null;
-    const ring = img(v.node, 'kit/hint_ring', this.size * 1.25, this.size * 1.25, 'hint');
-    fx.breathe(ring, 0.12, 0.9);
-    return ring;
   }
 }

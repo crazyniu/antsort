@@ -19,7 +19,7 @@ function dayIcon(d: SignInDay): [string, string] {
   if (d.chest) return ['icon/chest', tr('SIGNIN_CHEST')];
   if (d.coins) return ['icon/coin', fmt(d.coins)];
   if (d.wheel) return ['icon/entry_wheel', `+${d.wheel}`];
-  if (d.skill) return ['icon/skill_shuffle', `×${d.skill}`];
+  if (d.skill) return ['icon/skill_slot', `×${d.skill}`];
   return ['icon/gift', ''];
 }
 

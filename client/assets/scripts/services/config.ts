@@ -1,7 +1,7 @@
 // 配置表：assets/resources/config 下的 JSON（数值只在这里，CLAUDE.md 硬性约束 5）。启动时读一次。
 import { JsonAsset, resources } from 'cc';
 import type { AdsConfig, CardDef, EconomyConfig, GameUiConfig, LevelsConfig } from '../core/config';
-import { DemoLevel, generate, kindOf } from '../core/demo/level';
+import { DigLevel, LevelFile, fileName, kindOf, parse } from '../core/dig/level';
 import { lab } from '../devtools/levelLab';
 
 function describe(v: unknown): string {
@@ -57,12 +57,13 @@ export class Config {
   }
 
   /**
-   * 读一关。示例玩法按参数现场生成；换成读关卡文件的玩法时在这里 loadJson('config/levels/level_XXXX')。
+   * 读一关：config/levels/level_XXXX.json（微信版在网上，读不下来会抛错，由局内页面提示）。
    * ease：连输后降的档；开发版难度调试页挑了档（devtools/levelLab.ts）就用挑的那一档
    */
-  async loadLevel(fileId: number, ease: number, trayDelta = 0): Promise<DemoLevel> {
+  async loadLevel(fileId: number, ease: number): Promise<DigLevel> {
     const custom = lab.override(fileId);
     const e = custom && typeof custom.ease === 'number' ? custom.ease : ease;
-    return generate(this.levels, fileId, e, trayDelta);
+    const file = await loadJson<LevelFile>(`config/levels/${fileName(fileId)}`);
+    return parse(file, e);
   }
 }

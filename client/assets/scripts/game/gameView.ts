@@ -1,21 +1,21 @@
 // 局内页面（底座，换玩法时只改标了「玩法」的几处，见 docs/02）。
-// 版式：顶栏（设置 · 进度 · 关卡号 / 倒计时）→ 场地（尽量大）→ 连击计 → 暂存槽 → 技能栏。
+// 版式：顶栏（设置 · 进度 · 关卡号 / 倒计时）→ 料场（尽量大）→ 连击计 → 装车位 → 待发线 → 技能栏。
 // 逻辑在 core 里立即结算，这里按事件播表现（动画不挡操作）。连击的「满屏」：四边光框、放射光、往上冒的光点、升档夸奖、过关庆祝。
 import { Color, Label, Node, Sprite, Tween, UITransform, Vec3, tween } from 'cc';
 import { Combo } from '../core/meta/combo';
 import * as Skills from '../core/meta/skills';
 import * as Meta from '../core/meta/meta';
 import * as Chapters from '../core/meta/chapters';
-import type { DemoLevel } from '../core/demo/level';
-import * as Rules from '../core/demo/rules';
-import { GameState, Status } from '../core/demo/rules';
-import type { GameEvent } from '../core/demo/rules';
+import type { DigLevel } from '../core/dig/level';
+import * as Rules from '../core/dig/rules';
+import { GameState, Status } from '../core/dig/rules';
+import type { GameEvent } from '../core/dig/rules';
 import { Rng } from '../core/rng/rng';
 import { App } from '../services/app';
 import { buzz, sfx } from '../services/audio';
 import * as fx from '../ui/fx';
 import { language, tr } from '../ui/i18n';
-import { artNumber, at, blockInput, box, Capsule, capsule, COLOR, fit, fxImg, iconButton, img, keyButton, lazyImg, onTap, opacity, recycleFx, resizeSlice, setSlice, slice, text, textWidth, tint } from '../ui/kit';
+import { artNumber, at, blockInput, box, Capsule, capsule, COLOR, fit, fxImg, iconButton, img, keyButton, lazyImg, onTap, opacity, recycleFx, resizeSlice, slice, text, textWidth, tint } from '../ui/kit';
 import { Screen } from '../ui/screen';
 import { gameFrames, loadFrames } from '../ui/res';
 import { popupCount } from '../ui/popup';
@@ -23,8 +23,9 @@ import { skillName } from '../ui/popups';
 import { Page, ui } from '../ui/shell';
 import { Board } from './board';
 import * as Flow from './flow';
-import { labTray } from './labHooks';
+import { labSlots } from './labHooks';
 import { KIND_STYLE, kindBanner, kindTag, levelKind } from './levelKind';
+import { CarView, Station } from './station';
 
 export interface GameArg {
   level: number;
@@ -54,8 +55,8 @@ const SKILL_S = 104;
 const SKILL_GAP = 28;
 const BADGE_W = 42;
 const BADGE_H = 36;
-/** 暂存格的高 */
-const SLOT_H = 96;
+/** 倍速开关：开着就一直开着，换关不重置 */
+let fast = false;
 
 function mmss(sec: number): string {
   const t = Math.max(0, Math.ceil(sec));
@@ -64,7 +65,7 @@ function mmss(sec: number): string {
 
 export class GamePage extends Page {
   // ---- 一局的状态
-  lv!: DemoLevel;
+  lv!: DigLevel;
   s!: GameState;
   arg!: GameArg;
   combo = new Combo();
@@ -84,9 +85,8 @@ export class GamePage extends Page {
   /** 这一关要强制教的新技能（解锁关第一次能用上时压暗全屏只让点它）；"" = 没有 */
   tutor = '';
   demoStep = 0;
-  /** 玩法：图案号 → 图（收藏卡的前几张，换玩法时换成自己的图） */
-  private frames: string[] = [];
-  private undoSnap: GameState | null = null;
+  /** 正在挑「调车」要叫的车厢：挑中了调这个（局内流程给的，里面扣技能） */
+  private picking: ((track: number, index: number) => void) | null = null;
   private rng = new Rng(Date.now() >>> 0);
 
   // ---- 画面
@@ -100,10 +100,16 @@ export class GamePage extends Page {
   private clockCap: Capsule | null = null;
   private clockSecond = -1;
   private clockWarn = false;
-  private trayY = 0;
-  private traySlots: Node[] = [];
-  /** 块号 → 暂存槽里那块的节点 */
-  private trayNodes = new Map<number, Node>();
+  private station!: Station;
+  private stationY = 0;
+  /** 规则里的每个装车位，画面上是哪节车厢（事件一到就改，动画用当时取到的那节） */
+  private slotView: (CarView | null)[] = [];
+  /** 画面的时间（秒，一直走）和画面上的动画排到什么时候：新的挖豆动画接在后面播，不抢在前面的没播完之前 */
+  private vnow = 0;
+  private busyUntil = 0;
+  /** 画面上已经开走了几节（顶栏的进度） */
+  private shownDeparted = 0;
+  private speedLabel: Label | null = null;
   private skillNodes = new Map<string, { node: Node; icon: Node; count: Label; lock: Node; plus: Node; name: Node; badge: Node }>();
   private comboRow!: Node;
   private comboBadge!: Node;
@@ -140,18 +146,19 @@ export class GamePage extends Page {
     return Object.values(this.used).reduce((a, b) => a + b, 0);
   }
 
-  get canUndo(): boolean {
-    return this.undoSnap !== null;
-  }
-
   /** 这一关的关卡号，每日挑战是 0（「前几关技能免费」不算每日挑战） */
   get freeLevelId(): number {
     return this.arg.daily ? 0 : this.arg.level;
   }
 
-  /** 这一局消掉了几组（每日任务用） */
-  get cleared(): number {
-    return this.s ? this.s.cleared : 0;
+  /** 这一局发走了几节车厢（每日任务用） */
+  get departed(): number {
+    return this.s ? this.s.departed : 0;
+  }
+
+  /** 倍速：动画的时长都除以它 */
+  private get speed(): number {
+    return fast ? App.config.ui.dig.speed : 1;
   }
 
   skillFree(id: string): boolean {
@@ -167,7 +174,14 @@ export class GamePage extends Page {
     // 每帧推进：倒计时、连击窗口、提示、代打
     const ticker = box('ticker', root);
     tween(ticker)
-      .repeatForever(tween(ticker).delay(1 / 30).call(() => this.update(1 / 30)))
+      .repeatForever(
+        tween(ticker)
+          .delay(1 / 30)
+          .call(() => {
+            this.vnow += 1 / 30;
+            this.update(1 / 30);
+          }),
+      )
       .start();
   }
 
@@ -193,9 +207,8 @@ export class GamePage extends Page {
     const ease = this.arg.daily || this.arg.demo ? 0 : Meta.easeFor(save.data, config.eco, id);
     try {
       // 玩法：读关卡。微信版资源在网上，读不下来就提示、回主页（不扣命）
-      this.lv = await config.loadLevel(file, ease, this.arg.demo ? 0 : labTray());
-      this.frames = config.cards.slice(0, this.lv.kinds).map((c) => `card/${c.id}`);
-      await loadFrames([...this.frames, ...gameFrames()]).catch(() => loadFrames(this.frames));
+      this.lv = await config.loadLevel(file, ease);
+      await loadFrames(gameFrames());
     } catch (e) {
       console.warn('关卡读不出来', e);
       ui.toast(tr('BOOT_FAIL'));
@@ -207,6 +220,11 @@ export class GamePage extends Page {
     if (!Flow.payDaily(this)) return;
     this.s = GameState.fromLevel(this.lv);
     if (this.arg.daily || this.arg.demo) this.s.clock = Infinity;
+    // 难度调试页的整体档：装车位加减几个
+    if (!this.arg.demo) {
+      for (let d = labSlots(); d > 0; d--) this.s.slots.push(null);
+      for (let d = labSlots(); d < 0 && this.s.slots.length > 1; d++) this.s.slots.pop();
+    }
     this.combo = new Combo();
     this.comboTier = -1;
     this.comboBreaking = false;
@@ -218,10 +236,10 @@ export class GamePage extends Page {
     this.used = {};
     this.freebies = 0;
     this.extras = 0;
-    this.undoSnap = null;
+    this.picking = null;
     this.demoStep = 0;
     this.idle = 0;
-    this.total = this.lv.tiles.length;
+    this.total = this.lv.cars;
     this.layout(true);
     Flow.onLevelStart(this);
   }
@@ -234,8 +252,10 @@ export class GamePage extends Page {
     this.under.destroyAllChildren();
     this.stage.destroyAllChildren();
     this.fly.destroyAllChildren();
-    this.trayNodes.clear();
-    this.traySlots = [];
+    this.slotView = [];
+    this.busyUntil = this.vnow;
+    this.shownDeparted = this.s.departed;
+    this.picking = null;
     this.skillNodes.clear();
     this.nudged.clear();
     this.pointedNode = null;
@@ -264,7 +284,7 @@ export class GamePage extends Page {
       at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', gearW, () => Flow.pause(this)), x0 + gearW / 2, hudY);
       x0 += gearW + 10;
     }
-    // 进度：消掉了几块 / 一共几块（宽度按最长的写法定，整关不变）
+    // 进度：发走了几节 / 一共几节（宽度按最长的写法定，整关不变）
     this.progress = capsule(this.stage, Math.round((196 * h) / 66), h, 'icon/star', '', Math.round((34 * h) / 66), 'skin/f_hud', `${this.total}/${this.total}`);
     const realW = (this.progress.node.getComponent(UITransform) as UITransform).width;
     at(this.progress.node, x0 + realW / 2, hudY);
@@ -286,18 +306,12 @@ export class GamePage extends Page {
     const ids = Skills.ids(eco);
     ids.forEach((sid, i) => this.buildSkill(sid, (i - (ids.length - 1) / 2) * (SKILL_S + SKILL_GAP), skillY));
 
-    // ---- 暂存槽：技能栏上面
-    this.trayY = skillY + SKILL_S / 2 + 30 + SLOT_H / 2;
-    const cap = this.s.trayCap;
-    const sw = this.slotW();
-    for (let i = 0; i < cap; i++) {
-      const sl = slice(this.stage, 'kit/slot', sw, SLOT_H, `slot${i}`);
-      at(sl, this.slotX(i), this.trayY);
-      this.traySlots.push(sl);
-    }
+    // ---- 待发线：技能栏上面；装车位：待发线上面（玩法）
+    const trackTop = skillY + SKILL_S / 2 + 34 + Station.trackHeight();
+    this.stationY = trackTop + 22 + Station.padHeight() / 2;
 
-    // ---- 连击计：暂存槽上面一行（放在特效层，不挡点击）
-    this.comboY = this.trayY + SLOT_H / 2 + 56;
+    // ---- 连击计：装车位上面一行（放在特效层，不挡点击）
+    this.comboY = this.stationY + Station.padHeight() / 2 + 78;
     this.comboRow = box('combo', this.fly, 420, 120);
     at(this.comboRow, 0, this.comboY);
     this.comboBadge = box('badge', this.comboRow, 420, 120);
@@ -323,52 +337,43 @@ export class GamePage extends Page {
     this.feverRays = img(this.under, 'kit/fx_rays', raysS, raysS, 'rays');
     opacity(this.feverRays).opacity = 0;
 
-    // ---- 场地：顶栏和连击计之间的全部高度（玩法）
+    // ---- 料场：顶栏和连击计之间的全部高度（玩法）
     this.fieldTop = hudY - h / 2 - 20;
     this.fieldBottom = this.comboY + 50;
     const fh = this.fieldTop - this.fieldBottom;
     at(this.feverRays, 0, (this.fieldTop + this.fieldBottom) / 2);
     const holder = box('fieldHolder', this.stage, Screen.W, fh);
     at(holder, 0, (this.fieldTop + this.fieldBottom) / 2);
-    this.board = new Board(holder, Screen.W - 24, fh, this.lv, this.frames, (i) => this.tapTile(i));
-    this.board.build(this.s, intro);
-    // 暂存槽里已经有的块（撤销、复活后重画）
-    for (const t of this.s.tray) this.trayNodes.set(t, this.trayTile(t));
-    this.layoutTray(0, -1, true);
+    this.board = new Board(holder, Screen.W - 24, fh, this.lv);
+    this.board.build(this.s, intro, App.config.ui.intro.stagger);
+    // ---- 站台：装车位、待发线、已经停着的车厢（复活后重画）
+    this.station = new Station(this.stage, this.fly, this.board.colors, Screen.W, this.stationY, trackTop, (car) => this.tapCar(car));
+    this.station.build(this.s);
+    this.slotView = this.station.places.slice();
+    // ---- 倍速开关：料场和装车位之间那一行的最右边
+    const sp = slice(this.stage, 'kit/capsule', 84, 50, 'speed');
+    at(sp, Screen.W / 2 - 20 - 42, this.comboY);
+    this.speedLabel = text(sp, '', 28);
+    onTap(sp, () => {
+      fast = !fast;
+      this.refreshSpeed();
+    });
+    this.refreshSpeed();
     this.refreshHud();
     this.refreshSkills();
   }
 
-  private slotW(): number {
-    return Math.min(96, (Screen.W - 40) / this.s.trayCap - 8);
+  private refreshSpeed(): void {
+    if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
   }
 
-  private slotX(i: number): number {
-    const cap = this.s.trayCap;
-    const step = Math.min(104, (Screen.W - 40) / cap);
-    return -((cap - 1) * step) / 2 + i * step;
-  }
-
-  /** 暂存槽里的一块（玩法：长得和场上的块一样） */
-  private trayTile(t: number): Node {
-    const S = this.slotW() - 6;
-    const n = slice(this.fly, 'kit/panel_glass', S, S, `tray${t}`);
-    img(n, this.frames[this.s.tiles[t].kind] ?? 'icon/star', S * 0.74, S * 0.74, 'art');
-    at(n, 0, this.trayY);
-    return n;
-  }
-
-  /** 暂存槽里的块排到各自的格子上（skip = 正在飞进来的那块，它自己飞；instant = 重画时直接摆好） */
-  private layoutTray(delay: number, skip = -1, instant = false): void {
-    this.s.tray.forEach((t, i) => {
-      if (t === skip) return;
-      const n = this.trayNodes.get(t);
-      if (!n || !n.isValid) return;
-      const to = new Vec3(this.slotX(i), this.trayY, 0);
-      Tween.stopAllByTarget(n);
-      if (instant) n.setPosition(to);
-      else tween(n).delay(delay).to(0.14, { position: to }, { easing: 'quadOut' }).start();
-    });
+  /** 料场上第 p 个位置，在特效层里的坐标（挖机开到这里） */
+  private cellPos(p: number): Vec3 {
+    const out = new Vec3();
+    const local = this.board.pos(p);
+    (this.board.node.getComponent(UITransform) as UITransform).convertToWorldSpaceAR(local, out);
+    (this.fly.getComponent(UITransform) as UITransform).convertToNodeSpaceAR(out, out);
+    return out;
   }
 
   private buildSkill(id: string, x: number, y: number): void {
@@ -416,27 +421,18 @@ export class GamePage extends Page {
       resizeSlice(v.badge, bw, BADGE_H);
       at(v.badge, SKILL_S / 2 - bw / 2 + 8, SKILL_S / 2 - 10);
     }
-    // 撤销：没得撤销时变灰
-    const u = this.skillNodes.get('undo');
-    if (u && !u.lock.active) {
-      const off = !this.undoSnap;
-      (u.icon.getComponent(Sprite) as Sprite).grayscale = off;
-      opacity(u.icon).opacity = off ? 120 : 255;
-    }
   }
 
-  /** 进度、暂存槽告急（剩 warnFree 格变红闪）、该用道具时技能键发光 + 小手 */
+  /** 进度、装车位告急（只剩 warnFree 个空位变红）、该用道具时技能键发光 + 小手 */
   refreshHud(): void {
-    this.progress.set(`${this.total - this.s.left() - this.s.tray.length}/${this.total}`);
-    const cfg = App.config.ui.tray;
-    const free = this.s.trayCap - this.s.tray.length;
+    this.progress.set(`${this.shownDeparted}/${this.total}`);
+    const cfg = App.config.ui.station;
+    const free = this.s.freeSlots();
     const playing = this.s.status === Status.PLAYING;
-    const warn = playing && free <= cfg.warnFree;
-    this.traySlots.forEach((sl, i) => {
-      const on = warn && i >= this.s.tray.length;
-      setSlice(sl, on ? 'kit/slot_warn' : 'kit/slot');
-    });
-    const nudge = playing && this.moved && free <= cfg.skillNudgeFree;
+    // 一次点击算完以后还停在站台上的车厢都是在等豆的，所以空位少就是告急
+    const tight = playing && this.moved && free < this.s.slots.length;
+    this.station.setWarn(tight && free <= cfg.warnFree);
+    const nudge = tight && free <= cfg.skillNudgeFree;
     const hand = nudge ? (cfg.nudgeHand.find((id) => this.skillUsable(id)) ?? null) : null;
     this.pointSkill(hand);
     for (const [id, v] of this.skillNodes) {
@@ -469,23 +465,46 @@ export class GamePage extends Page {
 
   // ---------------------------------------------------------------- 输入（玩法）
 
-  private tapTile(i: number): void {
+  /** 点了一节车厢：待发线最前面的进站；后排的只有在挑「调车」时才点得动 */
+  private tapCar(car: CarView): void {
     if (this.arg.demo) return;
-    this.doTap(i);
-  }
-
-  private doTap(i: number): void {
-    if (this.ended || this.paused || this.s.status !== Status.PLAYING) return;
-    if (this.kindBannerNode) this.dismissKindBanner();
-    if (!this.s.free(i)) {
-      this.board.blocked(i);
-      sfx('error');
+    const at0 = this.station.find(car);
+    if (!at0) return; // 已经在站台上了
+    const [track, index] = at0;
+    const pick = this.picking;
+    if (pick && index > 0) {
+      if (!this.canEnter()) return this.refuse(car);
+      pick(track, index);
       return;
     }
-    const snap = this.s.clone();
-    const ev = Rules.tap(this.s, i);
-    if (ev.length === 0) return;
-    this.undoSnap = snap;
+    if (pick) this.endPick();
+    // 不在挑车时点后排，按点这条线最前面的算
+    this.doTap(track);
+  }
+
+  /** 现在叫得了车吗：规则里有空装车位，而且画面上也有（上一节还没开走的位子不能用） */
+  private canEnter(): boolean {
+    return this.s.freeSlot() >= 0 && this.station.freePlace() >= 0;
+  }
+
+  private refuse(car: CarView | null): void {
+    if (car) this.station.shake(car);
+    this.station.flashPads();
+    sfx('error');
+  }
+
+  /** 第 track 条线的车厢进站（index > 0 是「调车」叫的后排）。点不动返回 false */
+  doTap(track: number, index = 0): boolean {
+    if (this.ended || this.paused || this.s.status !== Status.PLAYING) return false;
+    if (this.kindBannerNode) this.dismissKindBanner();
+    const list = this.s.tracks[track];
+    if (!list || index >= list.length) return false;
+    if (!this.canEnter()) {
+      this.refuse(this.station.tracks[track]?.[index] ?? null);
+      return false;
+    }
+    const ev = index === 0 ? Rules.tap(this.s, track) : Rules.useShunt(this.s, track, index);
+    if (ev.length === 0) return false;
     this.clearHint();
     if (!this.moved) {
       this.moved = true;
@@ -493,96 +512,188 @@ export class GamePage extends Page {
     }
     this.play(ev);
     this.refreshSkills();
+    return true;
   }
 
-  /** 用道具等改了局面的操作：算出事件并播（道具不能撤销） */
+  /** 用道具等改了局面的操作：算出事件并播 */
   act(step: () => GameEvent[]): void {
     const ev = step();
-    this.undoSnap = null;
     this.play(ev);
     this.refreshSkills();
   }
 
-  /** 玩法：按事件播表现（换玩法时按自己的事件改；命中时调 hitCombo，赢了 celebrate 后 Flow.win，输了 Flow.lose） */
+  /** 过 sec 秒做一件事（按倍速缩短的时间由调用方算好；重画时一起取消） */
+  private later(sec: number, fn: () => void): void {
+    if (sec <= 0) fn();
+    else fx.delay(this.fly, sec, fn);
+  }
+
+  /**
+   * 玩法：按事件播表现。规则已经当场算完，这里把这一串事件排到时间上：
+   * 进站马上播；挖豆一轮一轮来，接在前面没播完的动画后面；装满的车厢等自己的挖机都回来了再开走（发车算一次命中）
+   */
   play(events: GameEvent[]): void {
-    const fly = App.config.ui.fly;
+    const cfg = App.config.ui.dig;
+    const k = 1 / this.speed;
+    const trip = (cfg.go + cfg.scoop + cfg.back) * k;
+    // t：从现在起过多久，这一串里的挖豆可以开始
+    let t = Math.max(0, this.busyUntil - this.vnow);
+    let round = -1;
+    let roundDur = 0;
     for (const e of events) {
-      if (e.type === 'move') {
-        const v = this.board.views[e.tile];
-        const n = this.trayTile(e.tile);
-        if (v) {
-          // 从场上那块的位置飞过去
-          const p = v.node.worldPosition;
-          const local = new Vec3();
-          (this.fly.getComponent(UITransform) as UITransform).convertToNodeSpaceAR(p, local);
-          n.setPosition(local);
-          v.node.active = false;
-        }
-        this.trayNodes.set(e.tile, n);
-        // 插在同图案后面：后面的块往右让一格
-        this.layoutTray(0, e.tile);
-        sfx('tap');
-        tween(n).to(fly.seconds, { position: new Vec3(this.slotX(e.slot), this.trayY, 0) }, { easing: 'quadOut' }).start();
-      } else if (e.type === 'clear') {
-        const nodes = e.tiles.map((t) => this.trayNodes.get(t)).filter((n): n is Node => !!n);
-        for (const t of e.tiles) this.trayNodes.delete(t);
-        fx.delay(this.fly, fly.seconds + fly.clearDelay, () => {
-          const mx = nodes.reduce((a, n) => a + n.position.x, 0) / Math.max(1, nodes.length);
-          for (const n of nodes) {
-            tween(n)
-              .to(0.12, { position: new Vec3(mx, this.trayY, 0), scale: new Vec3(1.15, 1.15, 1) })
-              .call(() => n.destroy())
-              .start();
-          }
-          fx.sparkle(this.fly, mx, this.trayY, 12, 120, COLOR.yellow, 30);
-          sfx('pop');
-          this.hitCombo(mx);
+      if (e.type === 'enter') {
+        const place = this.station.freePlace();
+        const car = this.station.enter(e.track, e.index, place, cfg.enter * k);
+        this.slotView[e.slot] = car;
+        car.busyEnd = this.vnow + cfg.enter * k;
+        this.later(cfg.enter * k, () => {
+          if (car.node.isValid) this.station.spawnDiggers(car, this.station.places.indexOf(car), cfg.diggers);
         });
-      } else if (e.type === 'shift') {
-        this.layoutTray(fly.seconds + fly.clearDelay + 0.12);
-      } else if (e.type === 'shuffle') {
-        this.board.reskin(this.s);
+        sfx('enter');
+        buzz('light');
+        t = Math.max(t, cfg.enter * k + 0.12 * k);
+      } else if (e.type === 'dig') {
+        if (e.round !== round) {
+          t += roundDur;
+          roundDur = 0;
+          round = e.round;
+        }
+        const car = this.slotView[e.slot];
+        if (!car) continue;
+        const buckets: number[][] = [];
+        for (let i = 0; i < e.cells.length; i += cfg.bucket) buckets.push(e.cells.slice(i, i + cfg.bucket));
+        const D = Math.max(1, cfg.diggers);
+        this.later(t, () => this.station.setWait(car, false));
+        buckets.forEach((cells, bi) => {
+          const start = t + (bi % D) * cfg.stagger * k + Math.floor(bi / D) * trip;
+          this.later(start, () => this.runDigger(car, bi % D, cells, k));
+        });
+        const dur = Math.min(buckets.length - 1, D - 1) * cfg.stagger * k + Math.ceil(buckets.length / D) * trip;
+        car.busyEnd = this.vnow + t + dur;
+        roundDur = Math.max(roundDur, dur);
+      } else if (e.type === 'depart') {
+        const car = this.slotView[e.slot];
+        this.slotView[e.slot] = null;
+        if (!car) continue;
+        const when = Math.max(0, car.busyEnd - this.vnow) + 0.05;
+        this.later(when, () => this.depart(car, k));
+        roundDur = Math.max(roundDur, when - t + cfg.depart * k * 0.5);
+      } else if (e.type === 'slot') {
+        while (this.slotView.length < e.count) this.slotView.push(null);
+        this.station.setSlots(e.count);
+        sfx('unlock');
       } else if (e.type === 'win') {
         this.ended = true;
-        fx.delay(this.fly, fly.seconds + fly.clearDelay + 0.3, () => {
+        this.later(t + roundDur + 0.3, () => {
           this.celebrate();
           fx.delay(this.fly, 1.2, () => Flow.win(this));
         });
       } else if (e.type === 'lose') {
-        fx.delay(this.fly, fly.seconds + 0.2, () => Flow.lose(this));
+        this.later(t + roundDur + 0.25, () => Flow.lose(this));
       }
     }
-    this.board.refresh(this.s);
+    const end = t + roundDur;
+    this.busyUntil = Math.max(this.busyUntil, this.vnow + end);
+    // 这一串播完还停在站台上的车厢，都是在等豆露出来的
+    const waiting = this.slotView.filter((c): c is CarView => c !== null);
+    this.later(end + 0.05, () => {
+      if (this.vnow + 0.02 < this.busyUntil) return; // 后面又排了新的动画
+      for (const c of waiting) if (this.station.places.includes(c)) this.station.setWait(c, true);
+      this.refreshHud();
+    });
     this.refreshHud();
   }
 
-  /** 撤销：退回上一步之前的局面，整个重画（连击当场断）。玩法：doTap 里每一步前存了快照 */
-  undo(): boolean {
-    const snap = this.undoSnap;
-    if (!snap) return false;
-    snap.clock = this.s.clock;
-    this.s = snap;
-    this.undoSnap = null;
-    this.combo.miss();
-    this.setFever(-1, COLOR.white);
-    this.layout(false);
-    fx.flash(this.fly, Screen.W, Screen.H, 60);
-    return true;
+  /** 一台挖机跑一趟：开到豆旁边 → 铲一斗（豆被挖走）→ 开回来倒进车厢（车厢的数字减下去） */
+  private runDigger(car: CarView, which: number, cells: number[], k: number): void {
+    const cfg = App.config.ui.dig;
+    const d = car.diggers[which % Math.max(1, car.diggers.length)];
+    const unload = (): void => {
+      if (!car.node.isValid) return;
+      this.station.setLeft(car, car.left - cells.length);
+      this.station.bump(car);
+    };
+    if (!d || !d.node.isValid) {
+      // 挖机还没出来（刚进站就开工）：豆照样按时挖走
+      this.later(cfg.go * k, () => cells.forEach((p) => this.board.dig(p)));
+      this.later((cfg.go + cfg.scoop + cfg.back) * k, unload);
+      return;
+    }
+    const target = this.cellPos(cells[0]);
+    // 停在豆的旁边（朝着车厢那一侧），不压在豆上
+    const side = d.home.x <= target.x ? -1 : 1;
+    target.x += side * this.board.cell * 0.55;
+    const n = d.node;
+    Tween.stopAllByTarget(n);
+    n.setScale(-side, 1, 1);
+    tween(n)
+      .to(cfg.go * k, { position: target }, { easing: 'quadOut' })
+      .call(() => {
+        for (const p of cells) this.board.dig(p);
+        d.load.active = true;
+        sfx('bo', 0, 0.5);
+      })
+      .to(cfg.scoop * k, { angle: -side * 16 })
+      .call(() => {
+        n.angle = 0;
+        n.setScale(side, 1, 1);
+      })
+      .to(cfg.back * k, { position: d.home }, { easing: 'quadIn' })
+      .call(() => {
+        d.load.active = false;
+        n.setScale(1, 1, 1);
+        unload();
+      })
+      .start();
+  }
+
+  /** 一节车厢装满开走：鸣笛、飘「发车！」、算一次命中，装车位空出来 */
+  private depart(car: CarView, k: number): void {
+    if (!car.node.isValid) return;
+    const x = car.node.position.x;
+    this.station.setLeft(car, 0);
+    this.station.leave(car, App.config.ui.dig.depart * k);
+    this.shownDeparted++;
+    sfx('depart');
+    buzz('light');
+    const tip = text(null, tr('UI_DEPART'), 30, { color: COLOR.yellow });
+    fx.floatUp(this.fly, tip.node, x, this.stationY + 40, 50, 0.7);
+    fx.sparkle(this.fly, x, this.stationY, 10, 110, this.board.colors[car.c], 28);
+    this.hitCombo(x);
+    this.refreshHud();
   }
 
   /** 复活等改了局面以后：整个重画 */
   resync(): void {
-    this.undoSnap = null;
     this.layout(false);
   }
 
-  /** 提示技能：亮出该点的那一块；没有能点的返回 false */
-  showSkillHint(): boolean {
-    const i = Rules.hint(this.s);
-    if (i < 0) return false;
+  /** 技能「透视」：下层的画亮几秒 */
+  xray(): void {
+    this.board.xray(App.config.ui.dig.xraySeconds);
+  }
+
+  /** 技能「调车」：开始挑车厢，挑中了调 pick（没点后排的车厢就取消） */
+  startPick(pick: (track: number, index: number) => void): void {
     this.clearHint();
-    this.hintNode = this.board.hint(i);
-    return this.hintNode !== null;
+    this.picking = pick;
+    this.station.highlightBack(true);
+    ui.toast(tr('UI_SHUNT_PICK'));
+  }
+
+  endPick(): void {
+    if (!this.picking) return;
+    this.picking = null;
+    this.station.highlightBack(false);
+  }
+
+  get isPicking(): boolean {
+    return this.picking !== null;
+  }
+
+  /** 画面上的动画都播完了吗 */
+  get quiet(): boolean {
+    return this.vnow >= this.busyUntil;
   }
 
   // ---------------------------------------------------------------- 连击（底座：换玩法照用，玩法只管在「命中」时调 hitCombo）
@@ -629,8 +740,8 @@ export class GamePage extends Page {
     bd.setScale(1.14, 1.14, 1);
     tween(bd).to(0.16, { scale: new Vec3(1, 1, 1) }, { easing: 'quadOut' }).start();
     fx.sparkle(this.fly, 0, this.comboY, 6 + Math.min(r.count, 10), 110, col, 28);
-    fx.glowPop(this.under, x, this.trayY, 300 + r.tier * 40, col, 0.3, 240);
-    fx.ring(this.under, x, this.trayY, 80, 280 + r.tier * 40, col);
+    fx.glowPop(this.under, x, this.stationY, 300 + r.tier * 40, col, 0.3, 240);
+    fx.ring(this.under, x, this.stationY, 80, 280 + r.tier * 40, col);
     fx.punch(this.stage, 1.008 + r.tier * 0.004);
     this.setFever(r.tier, col);
     this.pulseFrame();
@@ -868,27 +979,31 @@ export class GamePage extends Page {
       if (ev.length) this.play(ev);
       this.syncClock();
     }
-    // 闲着不点：亮提示
-    this.idle += dt;
+    // 闲着不点：亮提示（圈出该叫的那节车厢；动画没播完不算闲着）
+    const quiet = this.quiet;
+    if (quiet) this.idle += dt;
     const hint = App.config.ui.hint;
     const wait = this.arg.level <= hint.tutorialLevels ? hint.tutorialSeconds : hint.seconds;
-    if (!this.arg.demo && !this.hintNode && !this.tutorNode && this.idle > wait && this.s.status === Status.PLAYING) {
-      const i = Rules.hint(this.s);
-      if (i >= 0) {
-        this.hintNode = this.board.hint(i);
-        if (this.hintNode && this.arg.level <= hint.tutorialLevels) addFinger(this.hintNode);
+    if (!this.arg.demo && !this.hintNode && !this.tutorNode && !this.picking && this.idle > wait && this.s.status === Status.PLAYING) {
+      const car = this.station.front(Rules.hint(this.s));
+      if (car) {
+        const ring = img(car.node, 'kit/hint_ring', 150, 150, 'hint');
+        fx.breathe(ring, 0.1, 0.9);
+        this.hintNode = ring;
+        if (this.arg.level <= hint.tutorialLevels) addFinger(ring);
       }
     }
     if (this.tutor && !this.tutorNode) Flow.checkTutorial(this);
-    // 玩法：演示（调试页）按参考解点；机器人代打（./run.sh auto）按提示点
+    // 玩法：演示（调试页）按参考解点；机器人代打（./run.sh auto）按提示点。都等上一步的动画播完再点
     const demo = this.arg.demo === 'route';
-    if ((demo || App.flags.autoplay) && this.s.status === Status.PLAYING) {
+    if ((demo || App.flags.autoplay) && this.s.status === Status.PLAYING && quiet) {
       this.autoT += dt;
       if (this.autoT > (demo ? App.config.ui.demo.ring + App.config.ui.demo.gap : 0.35)) {
         this.autoT = 0;
-        const i = demo ? this.lv.ref[this.demoStep++] : Rules.hint(this.s);
-        if (i !== undefined && i >= 0) this.doTap(i);
-        else if (demo) Flow.demoStuck(this);
+        const t = demo ? this.lv.solution[this.demoStep] : Rules.hint(this.s);
+        if (t === undefined || t < 0) {
+          if (demo) Flow.demoStuck(this);
+        } else if (this.doTap(t) && demo) this.demoStep++;
       }
     }
   }

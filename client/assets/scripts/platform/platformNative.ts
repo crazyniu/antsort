@@ -14,7 +14,7 @@ import { native, sys } from 'cc';
 import { AdResult, Capability, PlatformBase, VibrateKind } from './platformBase';
 import { adUnits, loadPlatformConfig, PlatformConfig } from './platformConfig';
 
-const PREFIX = 'mygame.'; // 存档键前缀 = game.json 的 codeName + '.'（./run.sh check 会查两边一致）
+const PREFIX = 'antsort.'; // 存档键前缀 = game.json 的 codeName + '.'（./run.sh check 会查两边一致）
 
 const EV = {
   init: 'game.init',

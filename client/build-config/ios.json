@@ -1,5 +1,5 @@
 {
-  "name": "MyGame",
+  "name": "BeadExpress",
   "debug": false,
   "md5Cache": false,
   "buildPath": "project://build",
@@ -14,7 +14,7 @@
   "outputName": "ios",
   "packages": {
     "ios": {
-      "packageName": "com.example.mygame",
+      "packageName": "com.example.antsort",
       "orientation": {
         "portrait": true,
         "upsideDown": false,

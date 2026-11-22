@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { CardDef, EconomyConfig, LevelsConfig } from '../../assets/scripts/core/config';
-import { kindOf } from '../../assets/scripts/core/demo/level';
+import { kindOf } from '../../assets/scripts/core/dig/level';
 import * as DailyChallenge from '../../assets/scripts/core/meta/dailyChallenge';
 import * as LevelChest from '../../assets/scripts/core/meta/levelChest';
 import * as Meta from '../../assets/scripts/core/meta/meta';
@@ -88,7 +88,7 @@ function run(seed: number): Tally {
         const res = Settle.win(save, eco, { level, challenge: kind !== 'normal', boss: kind === 'boss', day, now });
         if (res.chest_ok) LevelChest.open(save, eco, cards, level, kind !== 'normal', rng);
       });
-      Tasks.add(save, eco, day, 'clear', 10);
+      Tasks.add(save, eco, day, 'depart', 6);
     }
     if (DailyChallenge.canStartFree(save, day) && DailyChallenge.enter(save, eco, day, 'free') && rng.randf() < WIN)
       earn(() => DailyChallenge.win(save, eco, cards, day, now, rng, 4, day));

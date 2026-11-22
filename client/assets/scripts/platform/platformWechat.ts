@@ -7,7 +7,7 @@ import { adUnits, AdUnits, loadPlatformConfig } from './platformConfig';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare const wx: any;
 
-const PREFIX = 'mygame.'; // 存档键前缀 = game.json 的 codeName + '.'（./run.sh check 会查两边一致）
+const PREFIX = 'antsort.'; // 存档键前缀 = game.json 的 codeName + '.'（./run.sh check 会查两边一致）
 
 /** 是不是在微信小游戏里跑 */
 export function inWechat(): boolean {

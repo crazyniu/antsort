@@ -1,7 +1,7 @@
 // 配置表的类型。数值只在 assets/resources/config/*.json 里，代码不写死（CLAUDE.md 硬性约束 5）。
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legend';
-/** 技能 id：示例玩法有 undo、hint、shuffle；换玩法时按自己的技能改（economy.json 的 skills.order） */
+/** 技能 id：slot 加位、shunt 调车、xray 透视（economy.json 的 skills.order，docs/01 第 1.6 节） */
 export type SkillId = string;
 
 /** 一张收藏卡（config/cards.json）：图在 resources/card/<id>.png，名字文案 CARD_<id> */
@@ -212,54 +212,42 @@ export interface AdsConfig {
 }
 
 /**
- * 关卡参数表（assets/resources/config/levels.json）。示例玩法（core/demo）按它现场生成关卡，不用关卡文件；
- * 换成自己的玩法时把这里换成自己的参数（或者改成读 config/levels/level_XXXX.json，见 docs/02）
+ * 关卡总表（assets/resources/config/levels.json，docs/02 第 4–6 节）。关卡本身一关一个文件 config/levels/level_XXXX.json
+ * （core/dig/level.ts 的 LevelFile），由 client/tools/level/build.ts 生成
  */
-export interface LevelSegment {
-  /** 从第几关起用这一段 */
-  from: number;
-  /** 几种图案 [起, 止]（这一段内从起线性涨到止） */
-  kinds: [number, number];
-  /** 每种几组三个 */
-  sets: [number, number];
-  /** 叠几层 */
-  layers: number;
-}
-
 export interface LevelsConfig {
   /** 关卡总数：超过后在后一半里循环（Meta.levelFile） */
   total: number;
   /** 每几关一个难关、每几关一个超难关（0 = 没有） */
   hardEvery: number;
   bossEvery: number;
-  /** 暂存槽几格 */
-  tray: number;
-  segments: LevelSegment[];
-  /** 难关、超难关在这一段的基础上加几种图案、几组 */
-  hard: { kindsPlus: number; setsPlus: number };
-  boss: { kindsPlus: number; setsPlus: number };
-  /** 连输几次以后降一档（每档少一种图案）：和 economy.json 的 easeAfterFails 一起用 */
-  easeKinds: number;
-  /** 限时：第 from 关起的难关、超难关限时，秒数 = 块数 × perTile，至少 min；不配 = 都不限时 */
-  clock?: { from: number; perTile: number; min: number };
+  /** 装车位几个 */
+  slots: number;
+  /** 时间到了复活加几秒 */
+  reviveSeconds: number;
+  /** 每种机关第几关首发：之前的关不能用（level-verify 查） */
+  mechanicFrom: Record<string, number>;
 }
 
 /** 界面数值（动画时长、提示、教学），assets/resources/config/game_ui.json */
 export interface GameUiConfig {
-  /** 点中的块飞进暂存槽几秒；三个消掉前停几秒 */
-  fly: { seconds: number; clearDelay: number };
-  /** 开局：块依次弹出的间隔 */
+  /**
+   * 挖豆的表现（docs/01 第 3 节）：一斗最多几颗、每节车厢几台挖机；车厢进站、挖机开过去、铲一斗、开回来各几秒，
+   * 同一节车厢的挖机一台接一台隔几秒出发；发车开走几秒；倍速的倍数；「透视」看几秒
+   */
+  dig: { bucket: number; diggers: number; enter: number; go: number; scoop: number; back: number; stagger: number; depart: number; speed: number; xraySeconds: number };
+  /** 开局：豆依次弹出的间隔 */
   intro: { startDelay: number; stagger: number };
   /** 难关、超难关的开局横幅（docs/09）：滑进来几秒、停几秒、缩成小牌子飞过去几秒 */
   kindBanner: { slideIn: number; hold: number; fly: number };
-  /** 难度调试页的整体三档（开发版）：下标 = 档 + 1（困难、标准、简单）；tray 暂存槽加减几格，window 连击窗口秒数（0 = 照 economy.json） */
-  labTiers: { tray: number; window: number }[];
+  /** 难度调试页的整体三档（开发版）：下标 = 档 + 1（困难、标准、简单）；slots 装车位加减几个，window 连击窗口秒数（0 = 照 economy.json） */
+  labTiers: { slots: number; window: number }[];
   /** 演示：每步先圈出来停 ring 秒再点，点完隔 gap 秒 */
   demo: { ring: number; gap: number };
   /** 限时关：剩几秒以内变色、跳动 */
   clock: { warn: number };
-  /** 暂存槽：剩几格时变红闪；剩几格时提醒用道具（rescueSkills 里的发光，nudgeHand 第一个能用的放小手） */
-  tray: { warnFree: number; skillNudgeFree: number; rescueSkills: string[]; nudgeHand: string[] };
+  /** 装车位：剩几个空位时变红闪；剩几个时提醒用道具（rescueSkills 里的发光，nudgeHand 第一个能用的放小手） */
+  station: { warnFree: number; skillNudgeFree: number; rescueSkills: string[]; nudgeHand: string[] };
   /** 闲着不点几秒后亮提示；前 tutorialLevels 关等 tutorialSeconds 秒 */
   hint: { tutorialLevels: number; tutorialSeconds: number; seconds: number };
   /** 第几关开局弹哪几条说明（文案键，逗号隔开） */

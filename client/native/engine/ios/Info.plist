@@ -22,7 +22,7 @@
 		<string>tr</string>
 	</array>
 	<key>CFBundleDisplayName</key>
-	<string>My Game</string>
+	<string>Bead Express</string>
 	<key>CFBundleExecutable</key>
 	<string>${CC_EXECUTABLE_NAME}</string>
 	<key>CFBundleIcons~ipad</key>

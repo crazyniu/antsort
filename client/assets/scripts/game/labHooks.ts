@@ -1,5 +1,5 @@
 // 游戏接难度调试页（底座 devtools/，docs/10 第 9 节）要给的东西：整体三档改什么、怎么试玩和演示、作弊按钮。
-// 整体三档：暂存槽多几格、连击窗口几秒，数在 game_ui.json 的 labTiers（下标 = 档 + 1：困难、标准、简单）。换玩法时改这里
+// 整体三档：装车位多几个、连击窗口几秒，数在 game_ui.json 的 labTiers（下标 = 档 + 1：困难、标准、简单）
 import * as Lives from '../core/meta/lives';
 import type { LabHooks } from '../devtools/labPage';
 import { lab } from '../devtools/levelLab';
@@ -10,7 +10,7 @@ import * as Flow from './flow';
 
 let comboWindow = 0;
 
-/** 整体档变了：连击窗口跟着改（暂存槽在开局时用 labBuffer 改） */
+/** 整体档变了：连击窗口跟着改（装车位在开局时用 labSlots 改） */
 export function applyTier(tier: number): void {
   const eco = App.config.eco;
   if (comboWindow === 0) comboWindow = eco.combo.windowSeconds;
@@ -18,9 +18,9 @@ export function applyTier(tier: number): void {
   eco.combo.windowSeconds = w > 0 ? w : comboWindow;
 }
 
-/** 开局的暂存槽按整体档加减几格（不是开发版时是 0） */
-export function labTray(): number {
-  return lab.enabled ? App.config.ui.labTiers[lab.tier + 1].tray : 0;
+/** 开局的装车位按整体档加减几个（不是开发版时是 0） */
+export function labSlots(): number {
+  return lab.enabled ? App.config.ui.labTiers[lab.tier + 1].slots : 0;
 }
 
 export const labHooks: LabHooks = {
@@ -37,8 +37,8 @@ export const labHooks: LabHooks = {
   },
   demo: (id) => Flow.startDemo(id),
   tierNote: (t) => {
-    const b = App.config.ui.labTiers[t + 1].tray;
-    return `暂存槽 ${b > 0 ? `多 ${b} 格` : b < 0 ? `少 ${-b} 格` : '照设计'}，连击窗口 ${App.config.eco.combo.windowSeconds} 秒`;
+    const b = App.config.ui.labTiers[t + 1].slots;
+    return `装车位 ${b > 0 ? `多 ${b} 个` : b < 0 ? `少 ${-b} 个` : '照设计'}，连击窗口 ${App.config.eco.combo.windowSeconds} 秒`;
   },
   extras: [
     {

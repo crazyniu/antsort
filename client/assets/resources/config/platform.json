@@ -1,17 +1,17 @@
 {
   "name": {
-    "en": "My Game",
-    "zh_CN": "我的游戏",
-    "zh_TW": "我的遊戲",
-    "ja": "マイゲーム",
-    "ko": "마이 게임",
-    "de": "My Game",
-    "fr": "My Game",
-    "es": "My Game",
-    "pt": "My Game",
-    "it": "My Game",
-    "ru": "My Game",
-    "tr": "My Game"
+    "en": "Bead Express",
+    "zh_CN": "挖豆小火车",
+    "zh_TW": "挖豆小火車",
+    "ja": "ビーズ列車",
+    "ko": "비즈 기차",
+    "de": "Perlen-Express",
+    "fr": "Perles Express",
+    "es": "Tren de Cuentas",
+    "pt": "Trem de Miçangas",
+    "it": "Treno di Perline",
+    "ru": "Бусинный экспресс",
+    "tr": "Boncuk Treni"
   },
   "version": "1.0.0",
   "languages": {

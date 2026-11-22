@@ -78,7 +78,7 @@ export function prizeItems(prizes: Prize[]): PrizeItem[] {
   const out: PrizeItem[] = [];
   for (const p of prizes) {
     if (p.kind === 'coin') out.push({ icon: 'icon/coin', amount: String(p.amount), name: tr('PRIZE_COINS') });
-    else if (p.kind === 'skill') out.push({ icon: skillIcon(p.skill ?? 'shuffle'), amount: `×${p.amount ?? 1}`, name: skillName(p.skill ?? 'shuffle') });
+    else if (p.kind === 'skill') out.push({ icon: skillIcon(p.skill ?? 'slot'), amount: `×${p.amount ?? 1}`, name: skillName(p.skill ?? 'slot') });
     else if (p.kind === 'inf_life') out.push({ icon: 'icon/heart_inf', amount: tr('UI_MINUTES', p.amount ?? 0) });
     else if (p.kind === 'frame') out.push({ icon: 'kit/fx_ring', amount: tr('H_PRIZE_FRAME') });
     else if (p.kind === 'card' && p.card_id) out.push({ icon: `card/${p.card_id}`, amount: tr(`UI_RARITY_${(p.rarity ?? 'common').toUpperCase()}`), rarity: p.rarity, name: cardName(p.card_id) });

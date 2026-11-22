@@ -4,7 +4,7 @@ import { sys } from 'cc';
 import { AdResult, Capability, PlatformBase, Profile, RankEntry, VibrateKind, WindowRect } from './platformBase';
 import { loadPlatformConfig } from './platformConfig';
 
-const PREFIX = 'mygame.'; // 存档键前缀 = game.json 的 codeName + '.'（./run.sh check 会查两边一致）
+const PREFIX = 'antsort.'; // 存档键前缀 = game.json 的 codeName + '.'（./run.sh check 会查两边一致）
 
 /** 模拟广告页由界面层提供（平台层不碰界面）：Boot 启动时注入 */
 export interface MockAdView {

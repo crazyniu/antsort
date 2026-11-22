@@ -60,7 +60,7 @@ export function load(raw: unknown, eco: EconomyConfig): SaveData {
   return raw as unknown as SaveData;
 }
 
-/** 一次性教学 / 提示有没有看过（键如 skill_undo、TIP_RULE） */
+/** 一次性教学 / 提示有没有看过（键如 skill_slot、TIP_RULE） */
 export function tipSeen(save: SaveData, key: string): boolean {
   return key in (save.seenTips ?? {});
 }

@@ -1,71 +1,17 @@
 {
- "_comment": "示例玩法的关卡参数（core/demo/level.ts 按它现场生成关卡，保证可解）。换玩法时换成自己的参数或关卡文件，见 docs/02",
- "total": 120,
+ "_comment": "关卡总表（docs/02 第 4–6 节）。关卡本身一关一个文件 config/levels/level_XXXX.json，由 client/tools/level/build.ts 生成。mechanicFrom：每种机关第几关首发（之前的关不能用）",
+ "total": 10,
  "hardEvery": 5,
- "bossEvery": 20,
- "tray": 7,
- "segments": [
-  {
-   "from": 1,
-   "kinds": [
-    3,
-    4
-   ],
-   "sets": [
-    1,
-    1
-   ],
-   "layers": 1
-  },
-  {
-   "from": 6,
-   "kinds": [
-    4,
-    6
-   ],
-   "sets": [
-    1,
-    2
-   ],
-   "layers": 2
-  },
-  {
-   "from": 21,
-   "kinds": [
-    6,
-    8
-   ],
-   "sets": [
-    2,
-    2
-   ],
-   "layers": 3
-  },
-  {
-   "from": 61,
-   "kinds": [
-    8,
-    10
-   ],
-   "sets": [
-    2,
-    3
-   ],
-   "layers": 3
-  }
- ],
- "hard": {
-  "kindsPlus": 1,
-  "setsPlus": 0
- },
- "boss": {
-  "kindsPlus": 2,
-  "setsPlus": 1
- },
- "easeKinds": 1,
- "clock": {
-  "from": 10,
-  "perTile": 2.2,
-  "min": 40
+ "bossEvery": 10,
+ "slots": 5,
+ "reviveSeconds": 30,
+ "mechanicFrom": {
+  "layers": 6,
+  "stone": 13,
+  "hard": 18,
+  "mystery": 24,
+  "lock": 30,
+  "link": 37,
+  "layers3": 44
  }
 }

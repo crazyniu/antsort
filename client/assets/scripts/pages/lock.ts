@@ -34,7 +34,7 @@ function rewardItems(r: Reward, mult = 1): PrizeItem[] {
   const out: PrizeItem[] = [];
   if (r.coins) out.push({ icon: 'icon/coin', amount: fmt(r.coins * mult) });
   const skills = (r.tools ?? 0) * App.config.eco.skills.order.length * mult + (r.skills ?? 0) * mult;
-  if (skills) out.push({ icon: 'icon/skill_hint', amount: `×${skills}` });
+  if (skills) out.push({ icon: 'icon/skill_slot', amount: `×${skills}` });
   if (r.unlimited) out.push({ icon: 'icon/heart_inf', amount: tr('PRIZE_HOURS', Math.round((r.unlimited * mult) / 3600)) });
   return out;
 }

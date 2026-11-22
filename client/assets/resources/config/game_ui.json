@@ -1,7 +1,15 @@
 {
- "fly": {
-  "seconds": 0.22,
-  "clearDelay": 0.08
+ "dig": {
+  "bucket": 3,
+  "diggers": 3,
+  "enter": 0.25,
+  "go": 0.24,
+  "scoop": 0.1,
+  "back": 0.24,
+  "stagger": 0.08,
+  "depart": 0.4,
+  "speed": 2,
+  "xraySeconds": 4
  },
  "intro": {
   "startDelay": 0.25,
@@ -14,15 +22,15 @@
  },
  "labTiers": [
   {
-   "tray": -1,
+   "slots": -1,
    "window": 2.5
   },
   {
-   "tray": 0,
+   "slots": 0,
    "window": 0
   },
   {
-   "tray": 1,
+   "slots": 1,
    "window": 6
   }
  ],
@@ -33,16 +41,16 @@
  "clock": {
   "warn": 15
  },
- "tray": {
-  "warnFree": 2,
-  "skillNudgeFree": 2,
+ "station": {
+  "warnFree": 1,
+  "skillNudgeFree": 1,
   "rescueSkills": [
-   "undo",
-   "shuffle"
+   "slot",
+   "shunt"
   ],
   "nudgeHand": [
-   "undo",
-   "shuffle"
+   "slot",
+   "shunt"
   ]
  },
  "hint": {
@@ -51,7 +59,9 @@
   "seconds": 8.0
  },
  "tips": {
-  "1": "TIP_RULE"
+  "1": "TIP_RULE",
+  "3": "TIP_INSIDE",
+  "6": "TIP_LAYERS"
  },
  "tutorial": {
   "delay": 0.4

@@ -7,6 +7,10 @@ ORIG_ARGS=("$@")
 
 source tools/cocos/creator.sh
 WEB_PORT="${WEB_PORT:-8080}"
+# 试玩 Chrome 的调试端口（./run.sh cdp 连它）；同时试玩两款游戏时各用各的端口，如 WEB_PORT=8081 CDP_PORT=9334
+export CDP_PORT="${CDP_PORT:-9333}"
+# 试玩 Chrome 的独立配置目录按游戏代号区分，两款游戏的存档（localStorage）互不干扰
+GAME_CODE="$(sed -nE 's/^ *"codeName": *"([^"]+)".*/\1/p' game.json | head -1)"
 
 usage() {
   cat <<'EOF'
@@ -43,7 +47,7 @@ usage() {
 试玩、serve、editor 运行前会先拉当前分支的最新代码（git pull --ff-only；Mac 上先还原 client/ 下
 编辑器写的改动）。拉不下来只提示、用当前代码继续。
 
-环境变量：WEB_PORT（本地服务端口，默认 8080）、COCOS_CREATOR（Cocos Creator 可执行文件的路径）、NO_PULL=1（不自动拉代码）
+环境变量：WEB_PORT（本地服务端口，默认 8080）、CDP_PORT（试玩 Chrome 的调试端口，默认 9333）、COCOS_CREATOR（Cocos Creator 可执行文件的路径）、NO_PULL=1（不自动拉代码）
 EOF
 }
 
@@ -126,7 +130,7 @@ web_serve() {
   # 后三个参数：窗口被别的窗口挡住时也照常跑（不然远程截图、连拍时画面是停的）
   local chrome=/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome
   if [ -x "$chrome" ]; then
-    (sleep 1; "$chrome" --user-data-dir="${TMPDIR:-/tmp}/game-chrome" --no-first-run --remote-debugging-port=9333 \
+    (sleep 1; "$chrome" --user-data-dir="${TMPDIR:-/tmp}/${GAME_CODE:-game}-chrome" --no-first-run --remote-debugging-port="${CDP_PORT}" \
       --no-default-browser-check --app="$url" --window-size=450,832 \
       --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --disable-background-timer-throttling >/dev/null 2>&1) &
   elif command -v open >/dev/null; then

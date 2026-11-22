@@ -33,6 +33,19 @@ out(
    <rect x="6.5" y="6.5" width="13" height="5" rx="2.5" fill="#ffffff"/>`,
 );
 
+// ---- 拼豆的高光片（显示 40 × 50，不染色，叠在豆上面）：顶边亮条、斜着的光斑、角上的高光点、下沿和侧面压暗。
+// 豆本体是整张染色的（乘法染色提不亮），光泽只能用这张不染色的叠出来
+out(
+  'kit/bead_top',
+  40,
+  50,
+  `<rect x="3" y="2.5" width="34" height="5" rx="2.5" fill="#fff" fill-opacity="0.5"/>
+   <path d="M5 40 L5 16 Q5 8 13 8 L21 8 Z" fill="#fff" fill-opacity="0.22"/>
+   <rect x="5.5" y="5.5" width="10" height="4.5" rx="2.25" fill="#fff" fill-opacity="0.85"/>
+   <rect x="4" y="33" width="32" height="5" rx="2.5" fill="#000" fill-opacity="0.12"/>
+   <rect x="1.5" y="43" width="37" height="5.5" rx="2.75" fill="#000" fill-opacity="0.16"/>`,
+);
+
 // ---- 小队方块（显示 100 × 92）：圆角方块，下面压一道深边；整张染色
 out(
   'kit/block_body',

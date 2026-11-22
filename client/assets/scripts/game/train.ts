@@ -24,14 +24,21 @@ export interface Drop {
   y: number;
 }
 
+/** 一列火车装到什么程度：每节占了几个位子、每节装的什么颜色（-1 = 还没定）、一共放进来几颗 */
+interface Load {
+  resv: number[];
+  color: number[];
+  put: number;
+}
+
 export class Train {
   private node: Node;
   private wagons: { node: Node; cubes: Node }[] = [];
   /** 现在停着的是第几列；state：进站中、停着、开走中、没车了 */
   private cur = 0;
   private state: 'in' | 'stop' | 'out' | 'none' = 'in';
-  private reserved = 0;
   private put = 0;
+  private loads: Load[] = [];
   private readonly cap: number;
 
   /**
@@ -55,9 +62,19 @@ export class Train {
     private onDrop: () => void,
   ) {
     this.cap = wagonCount * perWagon;
-    this.reserved = start;
+    // 复活后重画：已经装走的 start 颗按顺序塞满前几列（颜色不知道，后面照常接着装）
     this.put = start;
     this.cur = Math.floor(start / this.cap);
+    for (let k = 0, rem = start; rem > 0; k++) {
+      const L = this.loadOf(k);
+      const take = Math.min(this.capOf(k), rem);
+      L.put = take;
+      for (let w = 0, r = take; w < wagonCount && r > 0; w++) {
+        L.resv[w] = Math.min(perWagon, r);
+        r -= L.resv[w];
+      }
+      rem -= take;
+    }
     for (let x = -width / 2 - 30; x < width / 2 + 60; x += 60) at(img(layer, 'kit/track', 60, 18, 'track'), x + 30, y + 3);
     this.node = box('train', layer);
     this.makeTrain();
@@ -105,7 +122,7 @@ export class Train {
 
   private depart(): void {
     this.state = 'out';
-    const last = this.put >= this.total;
+    const last = this.cur >= Math.ceil(this.total / this.cap) - 1;
     this.onMove('out', last);
     for (let i = 0; i < 3; i++) this.puff(i * 0.12);
     tween(this.node)
@@ -139,21 +156,46 @@ export class Train {
       .start();
   }
 
-  /** 这一列装满了（或者整幅画的豆都装上了）就开走 */
+  /** 这一列每节都装满了（最后一列装完剩下的）就开走 */
   private check(): void {
     if (this.state !== 'stop') return;
-    const end = Math.min(this.total, (this.cur + 1) * this.cap);
-    if (this.put >= end && this.put > this.cur * this.cap) this.depart();
+    const c = this.capOf(this.cur);
+    if (c > 0 && this.loadOf(this.cur).put >= c) this.depart();
   }
 
-  /** 给下一颗豆定个位子：小人抱着豆往那里走 */
-  reserve(): Drop {
-    const r = this.reserved++;
-    const k = Math.floor(r / this.cap);
-    const inTrain = r % this.cap;
-    const wagon = Math.min(this.wagonCount - 1, Math.floor(inTrain / this.perWagon));
-    // 火车在画的上面：小人站在铁轨下沿放豆
-    return { train: k, wagon, index: inTrain % this.perWagon, x: this.homeX() + this.wagonX(wagon), y: this.y - 26 };
+  private loadOf(k: number): Load {
+    while (this.loads.length <= k) {
+      this.loads.push({ resv: new Array<number>(this.wagonCount).fill(0), color: new Array<number>(this.wagonCount).fill(-1), put: 0 });
+    }
+    return this.loads[k];
+  }
+
+  /** 第 k 列一共要装几颗（最后一列装剩下的那点） */
+  private capOf(k: number): number {
+    return Math.max(0, Math.min(this.cap, this.total - k * this.cap));
+  }
+
+  /**
+   * 给下一颗豆定个位子：一节车厢装一种颜色——先挑装着同色、还有空的那节；没有就开一节新的；
+   * 实在没有（颜色太多）就塞进装得最少的那节，保证不会堵住。前一列定满了才开始定下一列
+   */
+  reserve(color: number): Drop {
+    for (let k = Math.max(0, this.cur); ; k++) {
+      const L = this.loadOf(k);
+      const used = L.resv.reduce((a, b) => a + b, 0);
+      if (used >= this.capOf(k)) continue;
+      let wagon = L.resv.findIndex((n, i) => n < this.perWagon && L.color[i] === color);
+      if (wagon < 0) wagon = L.resv.findIndex((n, i) => n < this.perWagon && L.color[i] < 0);
+      if (wagon < 0) {
+        for (let i = 0; i < this.wagonCount; i++) {
+          if (L.resv[i] < this.perWagon && (wagon < 0 || L.resv[i] < L.resv[wagon])) wagon = i;
+        }
+      }
+      if (L.color[wagon] < 0) L.color[wagon] = color;
+      const index = L.resv[wagon]++;
+      // 火车在画的上面：小人站在铁轨下沿放豆
+      return { train: k, wagon, index, x: this.homeX() + this.wagonX(wagon), y: this.y - 26 };
+    }
   }
 
   /** 第 k 列停稳了、可以放吗 */
@@ -164,6 +206,7 @@ export class Train {
   /** 放进去一颗：车厢里多一颗这个颜色的小方块 */
   drop(d: Drop, color: number): void {
     this.put++;
+    this.loadOf(d.train).put++;
     this.onDrop();
     const w = this.wagons[d.wagon];
     if (w && this.cur === d.train) {

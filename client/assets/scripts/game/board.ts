@@ -25,7 +25,9 @@ export class Board {
   private cols: number[][] = [];
   private printL: Node;
   private beadL: Node;
+  private glossL: Node;
   private beads: Node[] = [];
+  private gloss: Node[] = [];
 
   /** parent 里 w × h 的一块地方（居中摆） */
   constructor(parent: Node, w: number, h: number, private lv: DigLevel) {
@@ -35,6 +37,7 @@ export class Board {
     // 分层放：同一层用同一张图，引擎才能合批
     this.printL = box('prints', this.node);
     this.beadL = box('beads', this.node);
+    this.glossL = box('gloss', this.node);
   }
 
   get width(): number {
@@ -61,18 +64,27 @@ export class Board {
   build(s: GameState, intro: boolean, stagger = 0.02): void {
     this.printL.destroyAllChildren();
     this.beadL.destroyAllChildren();
+    this.glossL.destroyAllChildren();
     this.cols = s.cols.map((c) => c.slice());
     const C = this.cell;
     const n = this.lv.w * this.lv.h;
     this.beads = [];
+    this.gloss = [];
     // 从上到下一行行放：下面一行盖住上面一行的侧面，只有下面空了才看得到厚度
     for (let p = 0; p < n; p++) {
       const at0 = this.pos(p);
       if (this.lv.cols[p].length > 0) at(tint(this.printL, C, C, PRINT, 'print'), at0.x, at0.y);
       const bead = img(this.beadL, 'kit/bead', C, C * (1 + SIDE), 'bead');
+      // 光泽：不染色的高光片，和豆同步（docs/01 第 3 节的「带厚度的立体小方块」）
+      const gl = img(this.glossL, 'kit/bead_top', C, C * (1 + SIDE), 'gl');
       this.beads.push(bead);
+      this.gloss.push(gl);
       this.render(p);
-      if (intro && this.cols[p].length > 0) fx.popIn(bead, 0.1 + (Math.hypot(at0.x, at0.y) / C) * stagger, 0.22);
+      if (intro && this.cols[p].length > 0) {
+        const d = 0.1 + (Math.hypot(at0.x, at0.y) / C) * stagger;
+        fx.popIn(bead, d, 0.22);
+        fx.popIn(gl, d, 0.22);
+      }
     }
   }
 
@@ -81,15 +93,22 @@ export class Board {
     const col = this.cols[p];
     const top = col.length > 0 ? col[col.length - 1] : -1;
     const bead = this.beads[p];
+    const gl = this.gloss[p];
     const C = this.cell;
     Tween.stopAllByTarget(bead);
+    Tween.stopAllByTarget(gl);
     bead.setScale(1, 1, 1);
+    gl.setScale(1, 1, 1);
     bead.active = top >= 0;
+    gl.active = top >= 0;
     if (top < 0) return;
     const at0 = this.pos(p);
     // 图的上面那一块正好盖住这一格，侧面垂在格子下面；摞着的往上抬一点
-    at(bead, at0.x, at0.y - (C * SIDE) / 2 + (col.length - 1) * C * LIFT);
+    const y = at0.y - (C * SIDE) / 2 + (col.length - 1) * C * LIFT;
+    at(bead, at0.x, y);
+    at(gl, at0.x, y);
     size(bead, C, C * (1 + SIDE));
+    size(gl, C, C * (1 + SIDE));
     (bead.getComponent(Sprite) as Sprite).color = this.colors[top] ?? Color.WHITE;
   }
 
@@ -109,16 +128,21 @@ export class Board {
     const col = this.cols[p];
     if (col.length === 0) return;
     const bead = this.beads[p];
+    const gl = this.gloss[p];
     col.pop();
     const under = col.length > 0 ? col[col.length - 1] : -1;
     Tween.stopAllByTarget(bead);
+    Tween.stopAllByTarget(gl);
+    tween(gl).to(0.08, { scale: new Vec3(0.3, 0.3, 1) }, { easing: 'quadIn' }).start();
     tween(bead)
       .to(0.08, { scale: new Vec3(0.3, 0.3, 1) }, { easing: 'quadIn' })
       .call(() => {
         this.render(p);
         if (under >= 0) {
           bead.setScale(0.7, 0.7, 1);
+          gl.setScale(0.7, 0.7, 1);
           tween(bead).to(0.14, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' }).start();
+          tween(gl).to(0.14, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' }).start();
         }
       })
       .start();

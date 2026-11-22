@@ -472,7 +472,7 @@ export class GamePage extends Page {
       this.board.colors,
       this.field,
       this.train,
-      { walk: cfg.walk, gap: cfg.gap, maxWalkers: cfg.maxWalkers },
+      { walk: cfg.walk, gap: cfg.gap, maxWalkers: cfg.maxWalkers, width: Screen.W },
       (job) => this.picked(job),
       (job) => {
         this.out.set(job.car, (this.out.get(job.car) ?? 0) + 1);

@@ -1,5 +1,5 @@
-// 小人（docs/01 第 3 节）：从船上的方块里跳上岸 → 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
-// → 绕到画上面、走到车厢边放进火车。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
+// 小人（docs/01 第 3 节）：从船上的方块里「跳」上岸（一道弧线）→ 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
+// → 绕到画上面、走到车厢边放进火车 → 空着手沿铁轨走出画面消失。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
 // 出发的先后要守住一条：后一轮才露出来的豆，不能比前一轮的豆先被搬走（不然看着像是从里面掏的）。
 // 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、举着豆一套（kit/wk_*，tools/art/sprites.py 切的）。
 import { Color, Node, Sprite, SpriteFrame, Vec3 } from 'cc';
@@ -8,9 +8,10 @@ import { frame } from '../ui/res';
 import type { CarView } from './station';
 import type { Drop, Train } from './train';
 
-/** 小人显示多高、手里的豆多大 */
+/** 小人显示多高、手里的豆多大、从船上跳上岸用几秒 */
 const H = 48;
 const CUBE = 18;
+const JUMP = 0.3;
 /** 姿势：f 正面、s 侧面、b 背面；前面加 c 是举着豆的 */
 const POSES = ['f', 's', 'b', 'cf', 'cs', 'cb'] as const;
 type Pose = (typeof POSES)[number];
@@ -46,8 +47,12 @@ interface Walker {
   seg: number;
   x: number;
   y: number;
-  /** 0 去搬、1 往火车走、2 在车厢边等火车停稳 */
+  /** 0 去搬、1 往火车走、2 在车厢边等火车停稳、3 放完了走出画面 */
   phase: number;
+  /** 从船上跳上岸：起点和进度（-1 = 没在跳） */
+  jx: number;
+  jy: number;
+  jumpT: number;
   drop: Drop | null;
   ox: number;
   oy: number;
@@ -81,7 +86,7 @@ export class Crew {
     private colors: Color[],
     private field: Field,
     private train: Train,
-    private cfg: { walk: number; gap: number; maxWalkers: number },
+    private cfg: { walk: number; gap: number; maxWalkers: number; width: number },
     private onPick: (job: Job) => void,
     private onSend: (job: Job) => void,
   ) {
@@ -182,12 +187,12 @@ export class Crew {
     return out;
   }
 
-  /** 去搬一颗豆的整条路：从船上跳上岸（正上方的河岸路），沿路绕到进入点，走进去 */
+  /** 去搬一颗豆的整条路：第一个点是跳上岸的落点（船正上方的河岸路），再沿路绕到进入点，走进去 */
   private routeOut(job: Job): Vec3[] {
     const f = this.field;
     const from = f.carPos(job.car);
     const bank = new Vec3(Math.min(f.r, Math.max(f.l, from.x)), f.b, 0);
-    const pts: Vec3[] = [new Vec3(from.x, from.y + 26, 0), bank];
+    const pts: Vec3[] = [bank];
     pts.push(...this.ring(bank, job.inside[0]));
     for (let i = 1; i < job.inside.length; i++) pts.push(job.inside[i]);
     return pts;
@@ -221,20 +226,39 @@ export class Crew {
       const w = this.walkers[i];
       if (w.phase === 2) {
         if (w.drop && this.train.ready(w.drop.train)) {
+          // 放进车厢，然后空着手沿铁轨走出画面
           this.train.drop(w.drop, w.job.color);
-          this.free(i);
-        } else {
-          this.draw(w, step);
+          w.cube.active = false;
+          const exitX = (w.x >= 0 ? 1 : -1) * (this.cfg.width / 2 + 40);
+          w.pts = [new Vec3(w.x, w.y, 0), new Vec3(exitX, w.y + 10, 0)];
+          w.seg = 0;
+          w.phase = 3;
         }
+        this.draw(w, step);
+        continue;
+      }
+      // 从船上跳上岸：一道弧线，落地才开始走
+      if (w.jumpT >= 0) {
+        w.jumpT = Math.min(1, w.jumpT + step / JUMP);
+        const k = w.jumpT;
+        w.x = w.jx + (w.pts[0].x - w.jx) * k;
+        w.y = w.jy + (w.pts[0].y - w.jy) * k + Math.sin(Math.PI * k) * 30;
+        if (w.jumpT >= 1) w.jumpT = -1;
+        this.draw(w, step);
         continue;
       }
       this.move(w, v);
+      if (w.phase === 3) {
+        if (w.seg >= w.pts.length - 1) this.free(i);
+        else this.draw(w, step);
+        continue;
+      }
       if (w.seg >= w.pts.length - 1) {
         if (w.phase === 0) {
           // 到豆旁边了：抱起来，定好放在哪节车厢，往火车走
           this.onPick(w.job);
           w.cube.active = true;
-          w.drop = this.train.reserve();
+          w.drop = this.train.reserve(w.job.color);
           w.pts = [new Vec3(w.x, w.y, 0), ...this.routeBack(w.job, w.drop)];
           w.seg = 0;
           w.phase = 1;
@@ -358,13 +382,21 @@ export class Crew {
         mdx: 0,
         mdy: 1,
         shown: '',
+        jx: 0,
+        jy: 0,
+        jumpT: -1,
       };
     }
     w.job = job;
     w.pts = pts;
     w.seg = 0;
-    w.x = pts[0].x;
-    w.y = pts[0].y;
+    // 从船上（方块的位置）跳到岸上的第一个点
+    const from = this.field.carPos(job.car);
+    w.jx = from.x;
+    w.jy = from.y + 10;
+    w.x = w.jx;
+    w.y = w.jy;
+    w.jumpT = 0;
     w.phase = 0;
     w.drop = null;
     w.ox = (Math.random() - 0.5) * 14;

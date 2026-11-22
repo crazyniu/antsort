@@ -156,14 +156,17 @@ describe('胜负', () => {
     assert.deepEqual(ev[ev.length - 1], { type: 'lose', reason: LoseReason.JAM });
   });
 
-  it('复活：堵死的多 1 个装车位，接着玩；每关一次由界面管', () => {
+  it('复活：堵死的，场上每支小队直接吸走自己颜色的豆，位子腾空，接着玩', () => {
     const s = GameState.fromLevel(level([ONION], [[car(2, 1), car(0, 16)], [car(1, 8)]], 2));
     Rules.tap(s, 0);
     Rules.tap(s, 1);
     const ev = Rules.revive(s, 30);
-    assert.deepEqual(ev, [{ type: 'slot', count: 3 }]);
+    assert.ok(ev.some((e) => e.type === 'dig'));
     assert.equal(s.status, Status.PLAYING);
     assert.ok(s.revived);
+    assert.equal(s.freeSlots(), 2, '两支小队都搬完离场了');
+    assert.equal(s.beads, 16);
+    assert.ok(!s.magnetUsed, '复活不算用过磁铁');
     Rules.tap(s, 0);
     assert.equal(s.status, Status.WON);
   });
@@ -198,6 +201,27 @@ describe('技能', () => {
     assert.equal(s.tracks[0].length, 2);
     const one = GameState.fromLevel(level([ONION], [[car(0, 16)], [car(1, 8)], [car(2, 1)]]));
     assert.ok(!Rules.canShunt(one));
+  });
+
+  it('磁铁：场上的小队直接吸走同色的豆，不管露没露出来；每关最多 1 次', () => {
+    const s = GameState.fromLevel(level([ONION], [[car(2, 1)], [car(1, 8)], [car(0, 16)]], 3));
+    assert.ok(!Rules.canMagnet(s), '场上没有小队');
+    Rules.tap(s, 0);
+    Rules.tap(s, 1);
+    assert.equal(s.status, Status.PLAYING);
+    assert.ok(Rules.canMagnet(s));
+    const ev = Rules.useMagnet(s);
+    assert.equal(s.departed, 2, '中间那颗和里面一圈都被吸走了');
+    assert.equal(s.beads, 16);
+    assert.ok(ev.some((e) => e.type === 'depart'));
+    assert.equal(s.status, Status.PLAYING);
+    Rules.tap(s, 2);
+    assert.equal(s.status, Status.WON);
+    const again = GameState.fromLevel(level([ONION], [[car(2, 1)], [car(1, 8)], [car(0, 16)]], 3));
+    Rules.tap(again, 0);
+    Rules.useMagnet(again);
+    Rules.tap(again, 1);
+    assert.ok(!Rules.canMagnet(again), '用过一次了');
   });
 
   it('透视：有被盖住的豆才有东西看', () => {

@@ -206,7 +206,7 @@ let tutoring = '';
 export function hasEffect(g: GamePage, id: string): string | null {
   if (id === 'slot') return g.s.slotAdded ? 'UI_SLOT_EMPTY' : null;
   if (id === 'shunt') return Rules.canShunt(g.s) ? null : 'UI_SHUNT_EMPTY';
-  if (id === 'xray') return g.s.hasHidden() ? null : 'UI_XRAY_EMPTY';
+  if (id === 'magnet') return Rules.canMagnet(g.s) ? null : 'UI_MAGNET_EMPTY';
   return null;
 }
 
@@ -264,7 +264,7 @@ export function useSkill(g: GamePage, id: string): void {
   }
   if (!pay()) return;
   if (id === 'slot') g.act(() => Rules.useSlot(g.s));
-  else if (id === 'xray') g.xray();
+  else if (id === 'magnet') g.act(() => Rules.useMagnet(g.s));
 }
 
 /** 数量为 0：金币买，金币不够则看广告得 1 个（docs/01）；这一版没有广告时只有金币买，弹窗矮一截 */
@@ -456,8 +456,8 @@ function revivePopup(g: GamePage): void {
       p.close();
       g.paused = false;
       g.extras++;
-      Rules.revive(g.s, App.config.levels.reviveSeconds);
-      g.resync();
+      // 复活：场上的小队直接吸走自己颜色的豆（规则返回事件，照常播）
+      g.act(() => Rules.revive(g.s, App.config.levels.reviveSeconds));
     },
   });
   at(ad.node, 0, -190);

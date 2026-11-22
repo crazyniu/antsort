@@ -1,7 +1,8 @@
 // 局内页面（底座，换玩法时只改标了「玩法」的几处，见 docs/02）。
-// 版式：顶栏（设置 · 进度 · 关卡号 / 倒计时）→ 料场（尽量大）→ 连击计 → 装车位 → 待发线 → 技能栏。
-// 逻辑在 core 里立即结算，这里按事件播表现（动画不挡操作）。连击的「满屏」：四边光框、放射光、往上冒的光点、升档夸奖、过关庆祝。
-import { Color, Label, Node, Sprite, Tween, UITransform, Vec3, tween } from 'cc';
+// 版式：顶栏（设置 · 进度 · 关卡号）→ 像素画（四周一圈小人走的路）→ 铁轨和火车 → 上场位 → 排队区 → 技能栏。
+// 逻辑在 core 里立即结算，这里按事件播表现（动画不挡操作）：小人一个个去搬（crew.ts），豆装上火车（train.ts）。
+// 代码里的名字沿用上一版：car = 小队方块，track = 排队区的一列，slot / place = 上场位。连击的那一套是底座的，这款游戏不用（docs/01 第 1.5 节）。
+import { Color, Director, Label, Node, Sprite, Tween, UITransform, Vec3, director, game, tween } from 'cc';
 import { Combo } from '../core/meta/combo';
 import * as Skills from '../core/meta/skills';
 import * as Meta from '../core/meta/meta';
@@ -22,10 +23,12 @@ import { popupCount } from '../ui/popup';
 import { skillName } from '../ui/popups';
 import { Page, ui } from '../ui/shell';
 import { Board } from './board';
+import { Crew, Field, Job } from './crew';
 import * as Flow from './flow';
 import { labSlots } from './labHooks';
 import { KIND_STYLE, kindBanner, kindTag, levelKind } from './levelKind';
 import { CarView, Station } from './station';
+import { Train } from './train';
 
 export interface GameArg {
   level: number;
@@ -55,6 +58,12 @@ const SKILL_S = 104;
 const SKILL_GAP = 28;
 const BADGE_W = 42;
 const BADGE_H = 36;
+/** 画四周那圈路：中线离画多远、路多宽；草地和沙子路的颜色 */
+const PATH_OUT = 26;
+const PATH_W = 44;
+const GRASS = new Color(140, 211, 106, 255);
+const GRASS_IN = new Color(154, 220, 120, 255);
+const SAND = new Color(244, 222, 164, 255);
 /** 倍速开关：开着就一直开着，换关不重置 */
 let fast = false;
 
@@ -102,13 +111,24 @@ export class GamePage extends Page {
   private clockWarn = false;
   private station!: Station;
   private stationY = 0;
-  /** 规则里的每个装车位，画面上是哪节车厢（事件一到就改，动画用当时取到的那节） */
+  /** 规则里的每个上场位，画面上是哪个方块（事件一到就改，动画用当时取到的那个） */
   private slotView: (CarView | null)[] = [];
-  /** 画面的时间（秒，一直走）和画面上的动画排到什么时候：新的挖豆动画接在后面播，不抢在前面的没播完之前 */
   private vnow = 0;
-  private busyUntil = 0;
-  /** 画面上已经开走了几节（顶栏的进度） */
-  private shownDeparted = 0;
+  private crew: Crew | null = null;
+  private train: Train | null = null;
+  private field!: Field;
+  /** 画的中心在特效层的哪里（算小人的路用） */
+  private boardAt = new Vec3();
+  /** 排活儿用的「画」：规则已经算到哪一步了，每个位置还摞着几颗（比画面上的走得快） */
+  private plan: number[] = [];
+  private groupSeq = 0;
+  /** 每个方块现在有几个小人在去搬的路上 */
+  private out = new Map<CarView, number>();
+  private pendingWin = false;
+  private pendingLose = false;
+  private lastPickSfx = 0;
+  /** 画面上已经搬走了几颗（顶栏的进度） */
+  private shownCarried = 0;
   private speedLabel: Label | null = null;
   private skillNodes = new Map<string, { node: Node; icon: Node; count: Label; lock: Node; plus: Node; name: Node; badge: Node }>();
   private comboRow!: Node;
@@ -172,6 +192,8 @@ export class GamePage extends Page {
     this.stage = box('stage', root, Screen.W, Screen.H);
     this.fly = box('fly', root, Screen.W, Screen.H);
     // 每帧推进：倒计时、连击窗口、提示、代打
+    // 小人每一帧都要走，跟着引擎的帧走（上面那个 30 帧的计时器会一顿一顿的）
+    director.on(Director.EVENT_BEFORE_UPDATE, () => this.step(game.deltaTime));
     const ticker = box('ticker', root);
     tween(ticker)
       .repeatForever(
@@ -239,7 +261,7 @@ export class GamePage extends Page {
     this.picking = null;
     this.demoStep = 0;
     this.idle = 0;
-    this.total = this.lv.cars;
+    this.total = this.lv.beads;
     this.layout(true);
     Flow.onLevelStart(this);
   }
@@ -253,8 +275,14 @@ export class GamePage extends Page {
     this.stage.destroyAllChildren();
     this.fly.destroyAllChildren();
     this.slotView = [];
-    this.busyUntil = this.vnow;
-    this.shownDeparted = this.s.departed;
+    this.crew = null;
+    this.train = null;
+    this.out.clear();
+    this.pendingWin = false;
+    this.pendingLose = false;
+    this.groupSeq = 0;
+    this.plan = this.s.cols.map((c) => c.length);
+    this.shownCarried = this.total - this.s.beads;
     this.picking = null;
     this.skillNodes.clear();
     this.nudged.clear();
@@ -284,8 +312,8 @@ export class GamePage extends Page {
       at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', gearW, () => Flow.pause(this)), x0 + gearW / 2, hudY);
       x0 += gearW + 10;
     }
-    // 进度：发走了几节 / 一共几节（宽度按最长的写法定，整关不变）
-    this.progress = capsule(this.stage, Math.round((196 * h) / 66), h, 'icon/star', '', Math.round((34 * h) / 66), 'skin/f_hud', `${this.total}/${this.total}`);
+    // 进度：搬走了百分之几（宽度按最长的写法定，整关不变）
+    this.progress = capsule(this.stage, Math.round((196 * h) / 66), h, 'icon/star', '', Math.round((34 * h) / 66), 'skin/f_hud', '100%');
     const realW = (this.progress.node.getComponent(UITransform) as UITransform).width;
     at(this.progress.node, x0 + realW / 2, hudY);
     progressRight = x0 + realW;
@@ -306,12 +334,16 @@ export class GamePage extends Page {
     const ids = Skills.ids(eco);
     ids.forEach((sid, i) => this.buildSkill(sid, (i - (ids.length - 1) / 2) * (SKILL_S + SKILL_GAP), skillY));
 
-    // ---- 待发线：技能栏上面；装车位：待发线上面（玩法）
-    const trackTop = skillY + SKILL_S / 2 + 34 + Station.trackHeight();
-    this.stationY = trackTop + 22 + Station.padHeight() / 2;
+    // ---- 排队区：技能栏上面；上场位：排队区上面；再往上是小人走的小路、铁轨（玩法）
+    const trackTop = skillY + SKILL_S / 2 + 30 + Station.trackHeight();
+    this.stationY = trackTop + 14 + Station.padHeight() / 2;
+    const laneY = this.stationY + Station.padHeight() / 2 + 20;
+    const railY = laneY + 22;
+    /** 画四周那圈路最下面一段的中线：正好在车厢上面 */
+    const ringB = railY + 100;
 
-    // ---- 连击计：装车位上面一行（放在特效层，不挡点击）
-    this.comboY = this.stationY + Station.padHeight() / 2 + 78;
+    // ---- 连击计（底座的，这款游戏不出）
+    this.comboY = laneY;
     this.comboRow = box('combo', this.fly, 420, 120);
     at(this.comboRow, 0, this.comboY);
     this.comboBadge = box('badge', this.comboRow, 420, 120);
@@ -337,22 +369,87 @@ export class GamePage extends Page {
     this.feverRays = img(this.under, 'kit/fx_rays', raysS, raysS, 'rays');
     opacity(this.feverRays).opacity = 0;
 
-    // ---- 料场：顶栏和连击计之间的全部高度（玩法）
-    this.fieldTop = hudY - h / 2 - 20;
-    this.fieldBottom = this.comboY + 50;
-    const fh = this.fieldTop - this.fieldBottom;
+    // ---- 像素画：顶栏和火车之间的全部高度，四周留一圈路；画贴着下面放，路的最下面一段正好在车厢上面（玩法）
+    this.fieldTop = hudY - h / 2 - 12;
+    this.fieldBottom = laneY - PATH_W / 2;
     at(this.feverRays, 0, (this.fieldTop + this.fieldBottom) / 2);
-    const holder = box('fieldHolder', this.stage, Screen.W, fh);
-    at(holder, 0, (this.fieldTop + this.fieldBottom) / 2);
-    this.board = new Board(holder, Screen.W - 24, fh, this.lv);
+    const maxW = Screen.W - 2 * (PATH_OUT + PATH_W / 2 + 14);
+    const maxH = this.fieldTop - PATH_W / 2 - 4 - ringB - 2 * PATH_OUT;
+    const holder = box('fieldHolder', this.stage, maxW, maxH);
+    this.board = new Board(holder, maxW, maxH, this.lv);
+    const bw = this.board.width;
+    const bh = this.board.height;
+    const by = ringB + PATH_OUT + bh / 2;
+    at(holder, 0, by);
+    this.boardAt.set(0, by, 0);
+    this.field = {
+      l: -bw / 2 - PATH_OUT,
+      r: bw / 2 + PATH_OUT,
+      b: ringB,
+      t: by + bh / 2 + PATH_OUT,
+      bridgeX: -Screen.W / 2 + 58,
+      laneY,
+      carPos: (car) => car.node.position,
+    };
+    // 草地、沙子路（垫在最下面）
+    const f = this.field;
+    const ground = box('ground', this.under);
+    ground.setSiblingIndex(0);
+    at(tint(ground, Screen.W, this.fieldTop + 8 - this.fieldBottom, GRASS, 'grass'), 0, (this.fieldTop + 8 + this.fieldBottom) / 2);
+    const paint = (n: Node, c: Color): void => {
+      (n.getChildByName('skin')?.getComponent(Sprite) as Sprite).color = c;
+    };
+    const ring = slice(ground, 'kit/round_white', f.r - f.l + PATH_W, f.t - f.b + PATH_W, 'ring');
+    at(ring, 0, (f.t + f.b) / 2);
+    paint(ring, SAND);
+    const inner = slice(ground, 'kit/round_white', f.r - f.l - PATH_W, f.t - f.b - PATH_W, 'inner');
+    at(inner, 0, (f.t + f.b) / 2);
+    paint(inner, GRASS_IN);
+    // 上场位和铁轨之间的小路、桥头接到那圈路上的一段
+    at(tint(ground, Screen.W, PATH_W, SAND, 'lane'), 0, laneY);
+    if (f.bridgeX < f.l) at(tint(ground, f.l - f.bridgeX + PATH_W, PATH_W, SAND, 'link'), (f.l + f.bridgeX) / 2, f.b);
     this.board.build(this.s, intro, App.config.ui.intro.stagger);
-    // ---- 站台：装车位、待发线、已经停着的车厢（复活后重画）
-    this.station = new Station(this.stage, this.fly, this.board.colors, Screen.W, this.stationY, trackTop, (car) => this.tapCar(car));
+    // ---- 铁轨、火车、小桥
+    const cfg = App.config.ui.dig;
+    const tc = App.config.levels.train;
+    let perWagon = tc.perWagon;
+    if (this.total < tc.wagons * perWagon * tc.minTrains) perWagon = Math.max(4, Math.ceil(this.total / (tc.wagons * tc.minTrains) / 4) * 4);
+    const rail = box('rail', this.stage);
+    this.train = new Train(rail, this.board.colors, Screen.W, railY, tc.wagons, perWagon, this.total, this.shownCarried, cfg.trainMove, () => this.speed, (last) => {
+      sfx('depart');
+      buzz('light');
+      if (!last) return;
+    });
+    at(img(this.stage, 'kit/bridge', 84, ringB - laneY + PATH_W, 'bridge'), f.bridgeX, (ringB + laneY) / 2);
+    // ---- 上场位、排队区、已经在场上的方块（复活后重画）
+    this.station = new Station(
+      this.stage,
+      this.board.colors,
+      Screen.W,
+      this.stationY,
+      trackTop,
+      !this.s.slotAdded,
+      (car) => this.tapCar(car),
+      () => Flow.useSkill(this, 'slot'),
+    );
     this.station.build(this.s);
     this.slotView = this.station.places.slice();
-    // ---- 倍速开关：料场和装车位之间那一行的最右边
+    // ---- 小人
+    this.crew = new Crew(
+      this.fly,
+      this.board.colors,
+      this.field,
+      this.train,
+      { walk: cfg.walk, gap: cfg.gap, maxWalkers: cfg.maxWalkers },
+      (job) => this.picked(job),
+      (job) => {
+        this.out.set(job.car, (this.out.get(job.car) ?? 0) + 1);
+        this.station.bump(job.car, 0.035);
+      },
+    );
+    // ---- 倍速开关：排队区右边
     const sp = slice(this.stage, 'kit/capsule', 84, 50, 'speed');
-    at(sp, Screen.W / 2 - 20 - 42, this.comboY);
+    at(sp, Screen.W / 2 - 20 - 42, trackTop - 36);
     this.speedLabel = text(sp, '', 28);
     onTap(sp, () => {
       fast = !fast;
@@ -367,13 +464,10 @@ export class GamePage extends Page {
     if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
   }
 
-  /** 料场上第 p 个位置，在特效层里的坐标（挖机开到这里） */
-  private cellPos(p: number): Vec3 {
-    const out = new Vec3();
-    const local = this.board.pos(p);
-    (this.board.node.getComponent(UITransform) as UITransform).convertToWorldSpaceAR(local, out);
-    (this.fly.getComponent(UITransform) as UITransform).convertToNodeSpaceAR(out, out);
-    return out;
+  /** 画上第 x 列第 y 行的中心，在特效层里的坐标（可以在画外面一圈） */
+  private cellAt(x: number, y: number): Vec3 {
+    const p = this.board.posXY(x, y);
+    return new Vec3(this.boardAt.x + p.x, this.boardAt.y + p.y, 0);
   }
 
   private buildSkill(id: string, x: number, y: number): void {
@@ -425,7 +519,7 @@ export class GamePage extends Page {
 
   /** 进度、装车位告急（只剩 warnFree 个空位变红）、该用道具时技能键发光 + 小手 */
   refreshHud(): void {
-    this.progress.set(`${this.shownDeparted}/${this.total}`);
+    this.progress.set(`${this.total > 0 ? Math.floor((this.shownCarried * 100) / this.total) : 0}%`);
     const cfg = App.config.ui.station;
     const free = this.s.freeSlots();
     const playing = this.s.status === Status.PLAYING;
@@ -522,155 +616,192 @@ export class GamePage extends Page {
     this.refreshSkills();
   }
 
-  /** 过 sec 秒做一件事（按倍速缩短的时间由调用方算好；重画时一起取消） */
-  private later(sec: number, fn: () => void): void {
-    if (sec <= 0) fn();
-    else fx.delay(this.fly, sec, fn);
-  }
-
   /**
-   * 玩法：按事件播表现。规则已经当场算完，这里把这一串事件排到时间上：
-   * 进站马上播；挖豆一轮一轮来，接在前面没播完的动画后面；装满的车厢等自己的挖机都回来了再开走（发车算一次命中）
+   * 玩法：按事件播表现。规则已经当场算完，这里把要搬的豆一颗颗排给小人（crew.ts 管什么时候出发）：
+   * 上场马上播；同一次点击里同一轮搬的豆算一批，后一批不会比前一批先被搬走；数字搬到 0 的方块离场
    */
   play(events: GameEvent[]): void {
     const cfg = App.config.ui.dig;
-    const k = 1 / this.speed;
-    const trip = (cfg.go + cfg.scoop + cfg.back) * k;
-    // t：从现在起过多久，这一串里的挖豆可以开始
-    let t = Math.max(0, this.busyUntil - this.vnow);
+    const crew = this.crew;
+    if (!crew) return;
     let round = -1;
-    let roundDur = 0;
+    let group = 0;
+    let paths: ((p: number) => Vec3[]) | null = null;
+    let taken: number[] = [];
+    const flush = (): void => {
+      for (const p of taken) this.plan[p] = Math.max(0, this.plan[p] - 1);
+      taken = [];
+    };
     for (const e of events) {
       if (e.type === 'enter') {
         const place = this.station.freePlace();
-        const car = this.station.enter(e.track, e.index, place, cfg.enter * k);
+        const car = this.station.enter(e.track, e.index, place, cfg.enter / this.speed);
         this.slotView[e.slot] = car;
-        car.busyEnd = this.vnow + cfg.enter * k;
-        this.later(cfg.enter * k, () => {
-          if (car.node.isValid) this.station.spawnDiggers(car, this.station.places.indexOf(car), cfg.diggers);
-        });
+        car.readyAt = crew.now + cfg.enter;
         sfx('enter');
         buzz('light');
-        t = Math.max(t, cfg.enter * k + 0.12 * k);
       } else if (e.type === 'dig') {
-        if (e.round !== round) {
-          t += roundDur;
-          roundDur = 0;
+        if (e.round !== round || !paths) {
+          flush();
           round = e.round;
+          group = ++this.groupSeq;
+          paths = this.pathFinder();
         }
         const car = this.slotView[e.slot];
         if (!car) continue;
-        const buckets: number[][] = [];
-        for (let i = 0; i < e.cells.length; i += cfg.bucket) buckets.push(e.cells.slice(i, i + cfg.bucket));
-        const D = Math.max(1, cfg.diggers);
-        this.later(t, () => this.station.setWait(car, false));
-        buckets.forEach((cells, bi) => {
-          const start = t + (bi % D) * cfg.stagger * k + Math.floor(bi / D) * trip;
-          this.later(start, () => this.runDigger(car, bi % D, cells, k));
-        });
-        const dur = Math.min(buckets.length - 1, D - 1) * cfg.stagger * k + Math.ceil(buckets.length / D) * trip;
-        car.busyEnd = this.vnow + t + dur;
-        roundDur = Math.max(roundDur, dur);
+        for (const p of e.cells) {
+          crew.add({ car, cell: p, color: e.c, group, inside: paths(p) });
+          taken.push(p);
+        }
       } else if (e.type === 'depart') {
         const car = this.slotView[e.slot];
         this.slotView[e.slot] = null;
         if (!car) continue;
-        const when = Math.max(0, car.busyEnd - this.vnow) + 0.05;
-        this.later(when, () => this.depart(car, k));
-        roundDur = Math.max(roundDur, when - t + cfg.depart * k * 0.5);
+        car.done = true;
+        if (car.left <= 0) this.station.leave(car);
       } else if (e.type === 'slot') {
         while (this.slotView.length < e.count) this.slotView.push(null);
         this.station.setSlots(e.count);
         sfx('unlock');
       } else if (e.type === 'win') {
         this.ended = true;
-        this.later(t + roundDur + 0.3, () => {
-          this.celebrate();
-          fx.delay(this.fly, 1.2, () => Flow.win(this));
-        });
+        this.pendingWin = true;
       } else if (e.type === 'lose') {
-        this.later(t + roundDur + 0.25, () => Flow.lose(this));
+        this.pendingLose = true;
       }
     }
-    const end = t + roundDur;
-    this.busyUntil = Math.max(this.busyUntil, this.vnow + end);
-    // 这一串播完还停在站台上的车厢，都是在等豆露出来的
-    const waiting = this.slotView.filter((c): c is CarView => c !== null);
-    this.later(end + 0.05, () => {
-      if (this.vnow + 0.02 < this.busyUntil) return; // 后面又排了新的动画
-      for (const c of waiting) if (this.station.places.includes(c)) this.station.setWait(c, true);
-      this.refreshHud();
-    });
+    flush();
     this.refreshHud();
   }
 
-  /** 一台挖机跑一趟：开到豆旁边 → 铲一斗（豆被挖走）→ 开回来倒进车厢（车厢的数字减下去） */
-  private runDigger(car: CarView, which: number, cells: number[], k: number): void {
-    const cfg = App.config.ui.dig;
-    const d = car.diggers[which % Math.max(1, car.diggers.length)];
-    const unload = (): void => {
-      if (!car.node.isValid) return;
-      this.station.setLeft(car, car.left - cells.length);
-      this.station.bump(car);
-    };
-    if (!d || !d.node.isValid) {
-      // 挖机还没出来（刚进站就开工）：豆照样按时挖走
-      this.later(cfg.go * k, () => cells.forEach((p) => this.board.dig(p)));
-      this.later((cfg.go + cfg.scoop + cfg.back) * k, unload);
-      return;
+  /**
+   * 给这一批要搬的豆找路：从画外面那一圈，穿过已经空了的格子，走到豆旁边。
+   * 返回的函数：第 p 个位置的豆 → 一串点（第 0 个在那圈路上，最后一个在豆旁边）
+   */
+  private pathFinder(): (p: number) => Vec3[] {
+    const w = this.lv.w;
+    const h = this.lv.h;
+    const W2 = w + 2;
+    const H2 = h + 2;
+    const dist = new Int32Array(W2 * H2).fill(-1);
+    const from = new Int32Array(W2 * H2).fill(-1);
+    const queue = new Int32Array(W2 * H2);
+    let tail = 0;
+    const open = (gx: number, gy: number): boolean => gx === 0 || gy === 0 || gx === W2 - 1 || gy === H2 - 1 || this.plan[(gy - 1) * w + (gx - 1)] === 0;
+    for (let gy = 0; gy < H2; gy++) {
+      for (let gx = 0; gx < W2; gx++) {
+        if (gx === 0 || gy === 0 || gx === W2 - 1 || gy === H2 - 1) {
+          dist[gy * W2 + gx] = 0;
+          queue[tail++] = gy * W2 + gx;
+        }
+      }
     }
-    const target = this.cellPos(cells[0]);
-    // 停在豆的旁边（朝着车厢那一侧），不压在豆上
-    const side = d.home.x <= target.x ? -1 : 1;
-    target.x += side * this.board.cell * 0.55;
-    const n = d.node;
-    Tween.stopAllByTarget(n);
-    n.setScale(-side, 1, 1);
-    tween(n)
-      .to(cfg.go * k, { position: target }, { easing: 'quadOut' })
-      .call(() => {
-        for (const p of cells) this.board.dig(p);
-        d.load.active = true;
-        sfx('bo', 0, 0.5);
-      })
-      .to(cfg.scoop * k, { angle: -side * 16 })
-      .call(() => {
-        n.angle = 0;
-        n.setScale(side, 1, 1);
-      })
-      .to(cfg.back * k, { position: d.home }, { easing: 'quadIn' })
-      .call(() => {
-        d.load.active = false;
-        n.setScale(1, 1, 1);
-        unload();
-      })
-      .start();
+    const DX = [1, -1, 0, 0];
+    const DY = [0, 0, 1, -1];
+    for (let head = 0; head < tail; head++) {
+      const q = queue[head];
+      const gx = q % W2;
+      const gy = (q - gx) / W2;
+      for (let k = 0; k < 4; k++) {
+        const nx = gx + DX[k];
+        const ny = gy + DY[k];
+        if (nx < 0 || ny < 0 || nx >= W2 || ny >= H2) continue;
+        const n = ny * W2 + nx;
+        if (dist[n] >= 0 || !open(nx, ny)) continue;
+        dist[n] = dist[q] + 1;
+        from[n] = q;
+        queue[tail++] = n;
+      }
+    }
+    const f = this.field;
+    /** 画外面一圈的格子 → 那圈路上对着它的点 */
+    const onRing = (gx: number, gy: number): Vec3 => {
+      const c = this.cellAt(gx - 1, gy - 1);
+      if (gx === 0) return new Vec3(f.l, Math.min(f.t, Math.max(f.b, c.y)), 0);
+      if (gx === W2 - 1) return new Vec3(f.r, Math.min(f.t, Math.max(f.b, c.y)), 0);
+      if (gy === 0) return new Vec3(c.x, f.t, 0);
+      return new Vec3(c.x, f.b, 0);
+    };
+    return (p: number): Vec3[] => {
+      const x = p % w;
+      const y = (p - x) / w;
+      const bead = this.cellAt(x, y);
+      let best = -1;
+      for (let k = 0; k < 4; k++) {
+        const n = (y + 1 + DY[k]) * W2 + (x + 1 + DX[k]);
+        if (dist[n] >= 0 && (best < 0 || dist[n] < dist[best])) best = n;
+      }
+      if (best < 0) {
+        // 没有空格子通到它（磁铁吸的、叠层的）：从最近的一边直接走过去
+        const d = [x, w - 1 - x, y, h - 1 - y];
+        const k = d.indexOf(Math.min(...d));
+        const edge = k === 0 ? onRing(0, y + 1) : k === 1 ? onRing(W2 - 1, y + 1) : k === 2 ? onRing(x + 1, 0) : onRing(x + 1, H2 - 1);
+        return [edge, bead];
+      }
+      const cells: number[] = [];
+      for (let q = best; q >= 0; q = from[q]) cells.push(q);
+      // cells：从豆旁边的空格子一路到画外面那一圈；倒过来就是进去的路
+      const border = cells[cells.length - 1];
+      const bx = border % W2;
+      const pts: Vec3[] = [onRing(bx, (border - bx) / W2)];
+      for (let i = cells.length - 2; i >= 0; i--) {
+        const gx = cells[i] % W2;
+        pts.push(this.cellAt(gx - 1, (cells[i] - gx) / W2 - 1));
+      }
+      const last = pts[pts.length - 1];
+      // 停在豆的边上，不踩上去
+      pts.push(cells.length === 1 ? new Vec3(bead.x + (last.x - bead.x) * 0.01, bead.y + (last.y - bead.y) * 0.01, 0) : new Vec3(last.x + (bead.x - last.x) * 0.45, last.y + (bead.y - last.y) * 0.45, 0));
+      return pts;
+    };
   }
 
-  /** 一节车厢装满开走：鸣笛、飘「发车！」、算一次命中，装车位空出来 */
-  private depart(car: CarView, k: number): void {
+  /** 一个小人抱起了一颗豆：豆从画上消失，方块的数字减 1，搬完的方块离场 */
+  private picked(job: Job): void {
+    const car = job.car;
+    this.board.dig(job.cell);
+    this.out.set(car, Math.max(0, (this.out.get(car) ?? 1) - 1));
+    this.shownCarried++;
+    if (this.vnow - this.lastPickSfx > 0.07) {
+      this.lastPickSfx = this.vnow;
+      sfx('bo', 0, 0.45);
+    }
     if (!car.node.isValid) return;
-    const x = car.node.position.x;
-    this.station.setLeft(car, 0);
-    this.station.leave(car, App.config.ui.dig.depart * k);
-    this.shownDeparted++;
-    sfx('depart');
-    buzz('light');
-    const tip = text(null, tr('UI_DEPART'), 30, { color: COLOR.yellow });
-    fx.floatUp(this.fly, tip.node, x, this.stationY + 40, 50, 0.7);
-    fx.sparkle(this.fly, x, this.stationY, 10, 110, this.board.colors[car.c], 28);
-    this.hitCombo(x);
+    this.station.setLeft(car, car.left - 1);
+    if (car.left <= 0 && car.done) {
+      const x = car.node.position.x;
+      this.station.leave(car);
+      this.out.delete(car);
+      sfx('hit', 2);
+      fx.sparkle(this.fly, x, this.stationY, 10, 110, this.board.colors[car.c], 28);
+    }
     this.refreshHud();
+  }
+
+  /** 每一帧：小人走路；该过关、该判输的时候收尾；标出在等豆的方块 */
+  private step(dt: number): void {
+    const crew = this.crew;
+    if (!crew || !this.s || !this.stage.isValid || !this.stage.activeInHierarchy) return;
+    if (this.paused || ui.currentName !== 'game' || popupCount() > 0) return;
+    crew.update(Math.min(dt, 0.05), this.speed);
+    for (const car of this.station.places) {
+      if (!car) continue;
+      const idle = car.left > 0 && crew.now > car.readyAt + 0.2 && !crew.pending(car) && (this.out.get(car) ?? 0) === 0;
+      this.station.setWait(car, idle);
+    }
+    if (this.pendingWin && crew.empty && this.train?.finished) {
+      this.pendingWin = false;
+      this.celebrate();
+      fx.delay(this.fly, 1.2, () => Flow.win(this));
+    }
+    if (this.pendingLose && !crew.busy) {
+      this.pendingLose = false;
+      fx.delay(this.fly, 0.25, () => Flow.lose(this));
+    }
   }
 
   /** 复活等改了局面以后：整个重画 */
   resync(): void {
     this.layout(false);
-  }
-
-  /** 技能「透视」：下层的画亮几秒 */
-  xray(): void {
-    this.board.xray(App.config.ui.dig.xraySeconds);
   }
 
   /** 技能「调车」：开始挑车厢，挑中了调 pick（没点后排的车厢就取消） */
@@ -691,14 +822,15 @@ export class GamePage extends Page {
     return this.picking !== null;
   }
 
-  /** 画面上的动画都播完了吗 */
+  /** 该搬的豆都被抱起来了吗（还在往火车走的不算） */
   get quiet(): boolean {
-    return this.vnow >= this.busyUntil;
+    return !this.crew || !this.crew.busy;
   }
 
   // ---------------------------------------------------------------- 连击（底座：换玩法照用，玩法只管在「命中」时调 hitCombo）
 
-  private hitCombo(x = 0): void {
+  /** 这款游戏不调它（docs/01 第 1.5 节不做连击）；留着是因为连击的满屏表现是底座的 */
+  protected hitCombo(x = 0): void {
     const eco = App.config.eco;
     const r = this.combo.hit(this.clock, eco.combo, this.rng, this.arg.daily === true);
     if (this.ended && this.s.status !== Status.WON) return;
@@ -979,9 +1111,9 @@ export class GamePage extends Page {
       if (ev.length) this.play(ev);
       this.syncClock();
     }
-    // 闲着不点：亮提示（圈出该叫的那节车厢；动画没播完不算闲着）
+    // 闲着不点：亮提示（圈出该点的那个方块；画面上没有空位、点不了的时候不算闲着）
     const quiet = this.quiet;
-    if (quiet) this.idle += dt;
+    if (quiet || this.station.freePlace() >= 0) this.idle += dt;
     const hint = App.config.ui.hint;
     const wait = this.arg.level <= hint.tutorialLevels ? hint.tutorialSeconds : hint.seconds;
     if (!this.arg.demo && !this.hintNode && !this.tutorNode && !this.picking && this.idle > wait && this.s.status === Status.PLAYING) {

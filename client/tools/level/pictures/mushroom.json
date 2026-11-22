@@ -1,0 +1,39 @@
+{
+ "name": "蘑菇",
+ "colors": {
+  "A": "#ff3b30",
+  "B": "#3a3348",
+  "C": "#ffffff",
+  "D": "#fff0c2"
+ },
+ "rows": [
+  "............BBBB............",
+  "............BBBB............",
+  "........BBBBAAAABBBB........",
+  "........BBBBAAAABBBB........",
+  "......BBAAAAAAAAAAAABB......",
+  "......BBAAAAAAAAAAAABB......",
+  "....BBAACCCAAAAAACCCAABB....",
+  "....BBAACCCAAAAAACCCAABB....",
+  "..BBAAAACCCAAAAAACCCAAAABB..",
+  "..BBAAAAAAAAAAAAAAAAAAAABB..",
+  "..BBAAAAAAAAAAAAAAAAAAAABB..",
+  "..BBAAAAAAAACCCCAAAAAAAABB..",
+  "BBAACCCAAAAACCCCAAAAACCCAABB",
+  "BBAACCCAAAAACCCCAAAAACCCAABB",
+  "BBAACCCAAAAACCCCAAAAACCCAABB",
+  "BBAAAAAAAAAAAAAAAAAAAAAAAABB",
+  "BBAAAAAAAAAAAAAAAAAAAAAAAABB",
+  "BBAAAAACCCAAAAAAAACCCAAAAABB",
+  "BBAAAAACCCAAAAAAAACCCAAAAABB",
+  "..BBAAACCCAAAAAAAACCCAAABB..",
+  "..BBBBBBBBBBBBBBBBBBBBBBBB..",
+  "....BBBBBBBBBBBBBBBBBBBB....",
+  ".......BBDDDCCCCCCCBB.......",
+  ".......BBCCCCCCCCCCBB.......",
+  ".......BBCCCCCCCCCCBB.......",
+  ".......BBCCCCCCCCCCBB.......",
+  ".........BCCCCCCCCB.........",
+  ".........BBBBBBBBBB........."
+ ]
+}

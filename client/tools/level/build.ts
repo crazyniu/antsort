@@ -13,7 +13,6 @@ import { CarDef, DigLevel, EaseVariant, LevelFile, fileName, kindOf, parse, prob
 import * as Rules from '../../assets/scripts/core/dig/rules';
 import { GameState, Status } from '../../assets/scripts/core/dig/rules';
 import { Rng } from '../../assets/scripts/core/rng/rng';
-import { COLORS, PICTURES } from './pictures';
 import { Measure, measure, replay, solve } from './solve';
 import { SPECS, Spec } from './specs';
 
@@ -29,26 +28,39 @@ const STEPS = 250;
 const QUICK_RUNS = 80;
 const RUNS = 400;
 
+interface Picture {
+  name: string;
+  /** 字母 → 色值 */
+  colors: Record<string, string>;
+  /** 一个字符一颗豆，'.' 是空格 */
+  rows: string[];
+}
+
+/** 图库：tools/level/pictures/<名字>.json，由 import.ts 从像素画图片转出来（docs/02 第 4 节） */
+function picture(k: string): Picture {
+  return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'pictures', `${k}.json`), 'utf8')) as Picture;
+}
+
 /** 一关的画：颜色表和每层的格子图（字母换成颜色编号） */
 function board(spec: Spec): { w: number; h: number; palette: string[]; layers: string[][]; name: string } {
-  const pics = spec.layers.map((k) => {
-    const p = PICTURES[k];
-    if (!p) throw new Error(`第 ${spec.id} 关：图库里没有 ${k}`);
-    return p;
-  });
+  const pics = spec.layers.map(picture);
   const h = pics[0].rows.length;
   const w = pics[0].rows[0].length;
-  const letters: string[] = [];
-  for (const p of pics) {
+  const palette: string[] = [];
+  const layers = pics.map((p) => {
     if (p.rows.length !== h || p.rows.some((r) => r.length !== w)) throw new Error(`第 ${spec.id} 关：${p.name} 的大小不是 ${w}×${h}`);
-    for (const r of p.rows) for (const ch of r) if (ch !== '.' && ch !== '#' && !letters.includes(ch)) letters.push(ch);
-  }
-  const palette = letters.map((ch) => {
-    const c = COLORS[ch];
-    if (!c) throw new Error(`第 ${spec.id} 关：没有颜色 ${ch}`);
-    return c;
+    return p.rows.map((r) =>
+      [...r]
+        .map((ch) => {
+          if (ch === '.' || ch === '#') return ch;
+          const c = p.colors[ch];
+          if (!c) throw new Error(`第 ${spec.id} 关：${p.name} 没有颜色 ${ch}`);
+          if (!palette.includes(c)) palette.push(c);
+          return DIGITS[palette.indexOf(c)];
+        })
+        .join(''),
+    );
   });
-  const layers = pics.map((p) => p.rows.map((r) => [...r].map((ch) => (ch === '.' || ch === '#' ? ch : DIGITS[letters.indexOf(ch)])).join('')));
   return { w, h, palette, layers, name: pics.map((p) => p.name).reverse().join(' / ') };
 }
 

@@ -1,4 +1,5 @@
-// 每一关用哪几幅画、多少条待发线、车厢多大、要多难（docs/02 第 5 节）。build.ts 按它生成关卡文件。
+// 每一关用哪几幅画、排队区几列、一队的数字多大、要多难（docs/02 第 6 节）。build.ts 按它生成关卡文件。
+// 代码里的名字沿用上一版：car = 小队方块，track = 排队区的一列。
 // target：两个量具的过关率要落在的区间（随手点、稳妥点），生成器换着种子试，挑最贴近的。
 
 export interface Spec {
@@ -18,23 +19,9 @@ export interface Spec {
 }
 
 export const SPECS: Spec[] = [
-  // 1–2：基本操作，怎么点都能过
-  { id: 1, layers: ['popsicle'], tracks: 2, car: [4, 30], maxCars: 4, mechanics: [], target: { random: [1, 1], safe: [1, 1] } },
-  { id: 2, layers: ['apple'], tracks: 2, car: [4, 40], maxCars: 5, mechanics: [], target: { random: [1, 1], safe: [1, 1] } },
-  // 3：被围住的颜色挖不到，叫早了占位
-  { id: 3, layers: ['egg_fried'], tracks: 2, car: [8, 20], mechanics: [], target: { random: [0.85, 1], safe: [1, 1] } },
-  // 4：技能「加位」的教学关
-  { id: 4, layers: ['melon'], tracks: 2, car: [6, 16], mechanics: [], target: { random: [0.85, 1], safe: [1, 1] } },
-  // 5：第一个难关
-  { id: 5, layers: ['mushroom'], tracks: 2, car: [6, 18], mechanics: [], target: { random: [0.25, 0.45], safe: [0.7, 0.9] } },
-  // 6：双层画首发（教学关），待发线变 3 条
-  { id: 6, layers: ['chick', 'eggshell'], tracks: 3, car: [4, 80], maxCars: 5, mechanics: ['layers'], target: { random: [1, 1], safe: [1, 1] } },
-  // 7：双层练习
-  { id: 7, layers: ['bear', 'gift'], tracks: 3, car: [6, 20], mechanics: ['layers'], target: { random: [0.8, 0.95], safe: [1, 1] } },
-  // 8：技能「调车」
-  { id: 8, layers: ['rainbow', 'cloud'], tracks: 3, car: [6, 18], mechanics: ['layers'], target: { random: [0.75, 0.95], safe: [1, 1] } },
-  // 9：技能「透视」
-  { id: 9, layers: ['gems', 'chest'], tracks: 3, car: [6, 18], mechanics: ['layers'], target: { random: [0.7, 0.9], safe: [1, 1] } },
-  // 10：第一个超难关，开始限时
-  { id: 10, layers: ['cat', 'cake'], tracks: 3, car: [8, 22], timeLimit: 150, mechanics: ['layers'], target: { random: [0.1, 0.3], safe: [0.6, 0.85] } },
+  // 现在只有试玩用的两关（给用户看效果）；正式的前 50 关按 docs/01 第 2.1 节的排布表做
+  // 1：怎么点都能过
+  { id: 1, layers: ['melon'], tracks: 2, car: [20, 120], maxCars: 5, mechanics: [], target: { random: [1, 1], safe: [1, 1] } },
+  // 2：大一点的画，开始有「叫早了白占位子」
+  { id: 2, layers: ['cakeslice'], tracks: 3, car: [12, 70], mechanics: [], target: { random: [0.6, 0.9], safe: [1, 1] } },
 ];

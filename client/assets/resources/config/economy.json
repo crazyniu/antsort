@@ -7,12 +7,12 @@
  "toolStart": {
   "slot": 0,
   "shunt": 0,
-  "xray": 0
+  "magnet": 0
  },
  "toolPrice": {
   "slot": 120,
   "shunt": 100,
-  "xray": 80
+  "magnet": 160
  },
  "toolMaxFree": 2,
  "toolMaxFreeById": {},
@@ -110,7 +110,7 @@
   "order": [
    "slot",
    "shunt",
-   "xray"
+   "magnet"
   ],
   "grantOnUnlock": 1,
   "freePerDay": 1,
@@ -324,7 +324,7 @@
   "signin": 3,
   "skill_slot": 4,
   "skill_shunt": 8,
-  "skill_xray": 9,
+  "skill_magnet": 16,
   "levelSelect": 5,
   "album": 8,
   "wheel": 10,

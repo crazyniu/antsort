@@ -1,7 +1,7 @@
 // 配置表的类型。数值只在 assets/resources/config/*.json 里，代码不写死（CLAUDE.md 硬性约束 5）。
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legend';
-/** 技能 id：slot 加位、shunt 调车、xray 透视（economy.json 的 skills.order，docs/01 第 1.6 节） */
+/** 技能 id：slot 加位、shunt 调队、magnet 磁铁（economy.json 的 skills.order，docs/01 第 1.6 节） */
 export type SkillId = string;
 
 /** 一张收藏卡（config/cards.json）：图在 resources/card/<id>.png，名字文案 CARD_<id> */
@@ -223,8 +223,10 @@ export interface LevelsConfig {
   bossEvery: number;
   /** 装车位几个 */
   slots: number;
-  /** 时间到了复活加几秒 */
+  /** 时间到了复活加几秒（这款游戏不限时，留着给规则函数用） */
   reviveSeconds: number;
+  /** 火车：一列几节、一节装几颗；豆太少的关把一节改小，保证至少开走 minTrains 列 */
+  train: { wagons: number; perWagon: number; minTrains: number };
   /** 每种机关第几关首发：之前的关不能用（level-verify 查） */
   mechanicFrom: Record<string, number>;
 }
@@ -232,10 +234,10 @@ export interface LevelsConfig {
 /** 界面数值（动画时长、提示、教学），assets/resources/config/game_ui.json */
 export interface GameUiConfig {
   /**
-   * 挖豆的表现（docs/01 第 3 节）：一斗最多几颗、每节车厢几台挖机；车厢进站、挖机开过去、铲一斗、开回来各几秒，
-   * 同一节车厢的挖机一台接一台隔几秒出发；发车开走几秒；倍速的倍数；「透视」看几秒
+   * 搬豆的表现（docs/01 第 3 节）：方块跳上上场位几秒；小人一秒走多远（设计单位）、同一个方块隔几秒放一个、同屏最多几个；
+   * 火车进站、开走各几秒；倍速的倍数
    */
-  dig: { bucket: number; diggers: number; enter: number; go: number; scoop: number; back: number; stagger: number; depart: number; speed: number; xraySeconds: number };
+  dig: { enter: number; walk: number; gap: number; maxWalkers: number; trainMove: number; speed: number };
   /** 开局：豆依次弹出的间隔 */
   intro: { startDelay: number; stagger: number };
   /** 难关、超难关的开局横幅（docs/09）：滑进来几秒、停几秒、缩成小牌子飞过去几秒 */

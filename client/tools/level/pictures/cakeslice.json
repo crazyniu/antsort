@@ -1,0 +1,43 @@
+{
+ "name": "草莓蛋糕",
+ "colors": {
+  "A": "#ffd21f",
+  "B": "#3a3348",
+  "C": "#ff6fae",
+  "D": "#fff0c2",
+  "E": "#ff3b30",
+  "F": "#2fcb4f",
+  "G": "#ffb3cf"
+ },
+ "rows": [
+  "..............BBB.........",
+  "...........BBBBFBBB.......",
+  "...........BFFBFFFB.......",
+  "............BFFFFB........",
+  "...........BEEFEEEEB......",
+  "..........BEEDEEEDEEBB....",
+  "..........BEEEEEEEEEBDB...",
+  ".........BBEEEEDEEEEBDDB..",
+  "........BDBEEDEEDEEBDDDBB.",
+  ".......BDDDBEEEEEEEBDDBDB.",
+  "......BDDDDDBEEDEBBDDDBDDB",
+  ".....BDDDDDDDBBBBDDDBBDDDB",
+  "....BDDDDDDDDDDDDDDDDDDDBB",
+  "...BDDDDDDDDDDDBBBBBBBBBAB",
+  "..BDDDDDDDBBBBBAAAAAAAAAAB",
+  ".BDDDDBBBBAAAAAAAAAAAAAACB",
+  "BDDBBBAAAAAAAAAAAAACCCCCCB",
+  "BBBAAAAAAAAACCCCCCCCCCCCCB",
+  "BAAAAAAACCCCCCCCCCCCCCCAAB",
+  "BAACCCCCCCCCCCCCCCCAAAAAAB",
+  "BCCCCCCCCAAAAAAAAAAAAAAACB",
+  "BCCCAAAAAAAAAAAAAAAACCCCCB",
+  "BAAAAAAAAAAAAAAACCCCCCCCCB",
+  "BAAAAACCCCCCCCCCCCCCCCCAAB",
+  "BCCCCCCCCCCCCCCGGGAAAAAAAB",
+  "BCCCCCCCAAAAAAAAAAAAAAAABB",
+  "BCCAAAAAAAAAAAAABBBBBBBBB.",
+  "BAAAAAAAABBBBBBB..........",
+  ".BBBBBBBBB................"
+ ]
+}

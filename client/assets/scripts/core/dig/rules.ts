@@ -64,6 +64,8 @@ export class GameState {
   revived = false;
   /** 用过「加位」了吗（每关一次） */
   slotAdded = false;
+  /** 这一关用过「磁铁」了（每关最多 1 次） */
+  magnetUsed = false;
 
   static fromLevel(lv: DigLevel): GameState {
     const s = new GameState();
@@ -94,6 +96,7 @@ export class GameState {
     s.loseReason = this.loseReason;
     s.revived = this.revived;
     s.slotAdded = this.slotAdded;
+    s.magnetUsed = this.magnetUsed;
     return s;
   }
 
@@ -196,9 +199,9 @@ function nearFirst(s: GameState): (a: number, b: number) => number {
  * 站台上的车厢一直装到没有豆可装为止。一轮：按这一轮开始时的局面，每节车厢（先进站的先来）把挖得到的同色豆装上，
  * 装满的发车；挖走的豆让别的豆露出来，下一轮接着装
  */
-function settle(s: GameState, ev: GameEvent[]): void {
+function settle(s: GameState, ev: GameEvent[], firstRound = 0): void {
   const cmp = nearFirst(s);
-  for (let round = 0; ; round++) {
+  for (let round = firstRound; ; round++) {
     const can = s.diggable();
     // 每种颜色这一轮挖得到的位置
     const byColor = new Map<number, number[]>();
@@ -292,6 +295,55 @@ export function useSlot(s: GameState): GameEvent[] {
   return [{ type: 'slot', count: s.slots.length }];
 }
 
+/** 技能「磁铁」能用吗：这一关还没用过，场上有没搬完的小队，而且画上还有它那种颜色的豆（露没露出来都算） */
+export function canMagnet(s: GameState): boolean {
+  if (s.status !== Status.PLAYING || s.magnetUsed) return false;
+  const colors = new Set<number>();
+  for (const car of s.slots) if (car && car.left > 0) colors.add(car.c);
+  if (colors.size === 0) return false;
+  for (let p = 0; p < s.cols.length; p++) if (colors.has(s.top(p))) return true;
+  return false;
+}
+
+/** 场上每支小队（先上场的先来）不管露没露出来，直接吸走画上它那种颜色的豆，吸到数字为 0 或者吸完；之后照常接着搬 */
+function pull(s: GameState, ev: GameEvent[]): void {
+  const cmp = nearFirst(s);
+  const order = s.slots.map((car, i) => ({ car, i })).filter((x): x is { car: Car; i: number } => x.car !== null);
+  order.sort((a, b) => a.car.seq - b.car.seq);
+  for (const { car, i } of order) {
+    if (car.left <= 0) continue;
+    const list: number[] = [];
+    for (let p = 0; p < s.cols.length; p++) if (s.top(p) === car.c) list.push(p);
+    if (list.length === 0) continue;
+    list.sort(cmp);
+    const cells = list.slice(0, car.left);
+    const under: number[] = [];
+    for (const p of cells) {
+      s.cols[p].pop();
+      under.push(s.top(p));
+    }
+    s.beads -= cells.length;
+    car.left -= cells.length;
+    ev.push({ type: 'dig', round: 0, slot: i, c: car.c, cells, under });
+    if (car.left === 0) {
+      s.slots[i] = null;
+      s.departed++;
+      ev.push({ type: 'depart', round: 0, slot: i, c: car.c });
+    }
+  }
+  settle(s, ev, 1);
+  check(s, ev);
+}
+
+/** 技能「磁铁」（每关最多 1 次，docs/01 第 1.6 节） */
+export function useMagnet(s: GameState): GameEvent[] {
+  if (!canMagnet(s)) return [];
+  s.magnetUsed = true;
+  const ev: GameEvent[] = [];
+  pull(s, ev);
+  return ev;
+}
+
 /** 时间走 dt 秒（只有限时关会输） */
 export function tick(s: GameState, dt: number): GameEvent[] {
   if (s.status !== Status.PLAYING || s.clock === Infinity) return [];
@@ -301,7 +353,7 @@ export function tick(s: GameState, dt: number): GameEvent[] {
   return ev;
 }
 
-/** 复活（每关一次）：堵死的加 1 个临时装车位；时间到的加 seconds 秒 */
+/** 复活（每关一次）：堵死的，场上每支小队立刻吸走自己颜色的豆（同「磁铁」，不算用过磁铁）；时间到的加 seconds 秒 */
 export function revive(s: GameState, seconds: number): GameEvent[] {
   if (s.status !== Status.LOST) return [];
   const reason = s.loseReason;
@@ -312,8 +364,9 @@ export function revive(s: GameState, seconds: number): GameEvent[] {
     s.clock = seconds;
     return [];
   }
-  s.slots.push(null);
-  return [{ type: 'slot', count: s.slots.length }];
+  const ev: GameEvent[] = [];
+  pull(s, ev);
+  return ev;
 }
 
 /** 点了第 track 条线以后，站台上一共能装上几颗（不改 s） */

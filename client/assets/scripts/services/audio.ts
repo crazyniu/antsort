@@ -37,7 +37,7 @@ const MAP: Record<string, string> = {
   // 技能：加位、调车、透视
   slot: 'unlock',
   shunt: 'shuffle',
-  xray: 'hint',
+  magnet: 'hint',
   // 进站、挖一斗、倒进车厢、发车
   enter: 'land',
   depart: 'bowl_done',

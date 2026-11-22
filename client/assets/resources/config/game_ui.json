@@ -1,15 +1,11 @@
 {
  "dig": {
-  "bucket": 3,
-  "diggers": 3,
-  "enter": 0.25,
-  "go": 0.24,
-  "scoop": 0.1,
-  "back": 0.24,
-  "stagger": 0.08,
-  "depart": 0.4,
-  "speed": 2,
-  "xraySeconds": 4
+  "enter": 0.3,
+  "walk": 330,
+  "gap": 0.085,
+  "maxWalkers": 120,
+  "trainMove": 0.75,
+  "speed": 2
  },
  "intro": {
   "startDelay": 0.25,
@@ -46,10 +42,12 @@
   "skillNudgeFree": 1,
   "rescueSkills": [
    "slot",
-   "shunt"
+   "shunt",
+   "magnet"
   ],
   "nudgeHand": [
    "slot",
+   "magnet",
    "shunt"
   ]
  },
@@ -60,8 +58,7 @@
  },
  "tips": {
   "1": "TIP_RULE",
-  "3": "TIP_INSIDE",
-  "6": "TIP_LAYERS"
+  "3": "TIP_INSIDE"
  },
  "tutorial": {
   "delay": 0.4

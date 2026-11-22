@@ -1,8 +1,8 @@
 // 局内页面（底座，换玩法时只改标了「玩法」的几处，见 docs/02）。
-// 版式：顶栏（设置 · 进度 · 关卡号）→ 像素画（四周一圈小人走的路）→ 铁轨和火车 → 上场位 → 排队区 → 技能栏。
+// 版式：顶栏（设置 · 进度 · 关卡号）→ 铁轨和火车 → 像素画（四周一圈小人走的路）→ 小河（船 = 上场位）→ 排队区 → 技能栏。
 // 逻辑在 core 里立即结算，这里按事件播表现（动画不挡操作）：小人一个个去搬（crew.ts），豆装上火车（train.ts）。
 // 代码里的名字沿用上一版：car = 小队方块，track = 排队区的一列，slot / place = 上场位。连击的那一套是底座的，这款游戏不用（docs/01 第 1.5 节）。
-import { Color, Director, Label, Node, Sprite, Tween, UITransform, Vec3, director, game, tween } from 'cc';
+import { Color, Director, Graphics, Label, Node, Sprite, Tween, UITransform, Vec3, director, game, tween } from 'cc';
 import { Combo } from '../core/meta/combo';
 import * as Skills from '../core/meta/skills';
 import * as Meta from '../core/meta/meta';
@@ -57,9 +57,11 @@ const SKILL_S = 104;
 const SKILL_GAP = 28;
 const BADGE_W = 42;
 const BADGE_H = 36;
-/** 画四周那圈路：中线离画多远、路多宽；草地和沙子路的颜色 */
-const PATH_OUT = 30;
-const PATH_W = 38;
+/** 画四周那圈路（比例照效果图量的）：路的外沿离屏幕两边多远、路多宽、四个角的圆角半径（中线上的）、画离路的里沿至少多远 */
+const RING_OUT = 30;
+const PATH_W = 44;
+const RING_R = 70;
+const PIC_GAP = 30;
 // 颜色照效果图（art/raw/mock_game_page_v2）取：都是高饱和的亮色，画上的豆才不显灰
 const GRASS = new Color(140, 222, 66, 255);
 const SAND = new Color(251, 215, 128, 255);
@@ -67,7 +69,7 @@ const SAND = new Color(251, 215, 128, 255);
 const SAND_EDGE = new Color(226, 181, 92, 255);
 const EDGE_W = 3;
 /** 小河多高；水的三个颜色（深、中、亮） */
-const RIVER_H = 150;
+const RIVER_H = 132;
 const WATER_DEEP = new Color(16, 138, 232, 255);
 const WATER = new Color(34, 174, 252, 255);
 const WATER_LIGHT = new Color(178, 232, 255, 255);
@@ -386,69 +388,55 @@ export class GamePage extends Page {
     this.feverRays = img(this.under, 'kit/fx_rays', raysS, raysS, 'rays');
     opacity(this.feverRays).opacity = 0;
 
-    // ---- 拼豆画：铁轨和小河之间的全部高度，四周留一圈路，上下居中（玩法）
-    const fB0 = riverTop + PATH_W / 2 - 6;
-    const fT0 = railY - 54;
-    const maxW = Screen.W - 2 * (PATH_OUT + PATH_W / 2 + 14);
-    const maxH = fT0 - fB0 - 2 * PATH_OUT;
-    const holder = box('fieldHolder', this.stage, maxW, maxH);
-    this.board = new Board(holder, maxW, maxH, this.lv);
-    const bw = this.board.width;
-    const bh = this.board.height;
-    const by = (fB0 + fT0) / 2;
-    at(holder, 0, by);
-    this.boardAt.set(0, by, 0);
+    // ---- 那圈路：左右贴着屏幕两边留一条草地，上面那一段紧挨铁轨路基（小人站在路上往车厢里放豆），下面那一段压着河岸（小人从船上跳上来就是路）
     this.field = {
-      l: -bw / 2 - PATH_OUT,
-      r: bw / 2 + PATH_OUT,
-      b: by - bh / 2 - PATH_OUT,
-      t: by + bh / 2 + PATH_OUT,
+      l: -Screen.W / 2 + RING_OUT + PATH_W / 2,
+      r: Screen.W / 2 - RING_OUT - PATH_W / 2,
+      b: riverTop + 12 + PATH_W / 2,
+      t: railY - 36,
+      rad: RING_R,
       carPos: (car) => car.node.position,
     };
-    this.fieldTop = this.field.t;
-    this.fieldBottom = this.field.b;
-    at(this.feverRays, 0, by);
-    // ---- 地面（垫在最下面）：那圈路、铁轨路基、河岸、排队区的沙地，和画左右接上下的小路
     const f = this.field;
+    // ---- 拼豆画：摆在那圈路的正中间，四周留出草地（画不顶满：效果图里画只占屏宽的一半多，是场景里的主角而不是一块板）
+    const maxW = f.r - f.l - PATH_W - 2 * PIC_GAP;
+    const maxH = f.t - f.b - PATH_W - 2 * PIC_GAP;
+    const holder = box('fieldHolder', this.stage, maxW, maxH);
+    this.board = new Board(holder, maxW, maxH, this.lv);
+    const by = (f.b + f.t) / 2;
+    at(holder, 0, by);
+    this.boardAt.set(0, by, 0);
+    this.fieldTop = f.t;
+    this.fieldBottom = f.b;
+    at(this.feverRays, 0, by);
+    // ---- 地面（垫在最下面，一张矢量图）：铁轨路基、那圈圆角的路、两边河岸、排队区的沙地。
+    // 分两遍画：先把每一块画大一圈、用深色（描边），再画沙子；接在一起的几块之间不会有边线横穿
     const ground = box('ground', this.under);
     ground.setSiblingIndex(0);
-    const paint = (n: Node, c: Color): void => {
-      (n.getChildByName('skin')?.getComponent(Sprite) as Sprite).color = c;
-    };
-    // 沙地分两遍画：先画每一块的深色边（大一圈），再画沙子，接起来的地方边线不会横穿过去
-    const sands: { w: number; h: number; x: number; y: number; round: boolean }[] = [];
-    const sand = (w: number, h: number, x: number, y: number, round = false): void => {
-      sands.push({ w, h, x, y, round });
-    };
-    const fy = (f.t + f.b) / 2;
-    sand(Screen.W, 40, 0, railY + 8);
-    sand(f.r - f.l + PATH_W, f.t - f.b + PATH_W, 0, fy, true);
-    for (const sx of [-1, 1]) {
-      // 往上接到路基、往下接到河岸的小路
-      sand(44, railY - f.t + PATH_W, (sx * (f.r - f.l)) / 4, (railY + f.t) / 2);
-      const dh = f.b - riverTop + PATH_W / 2;
-      if (dh > 10) sand(44, dh, (sx * (f.r - f.l)) / 4, (f.b - PATH_W / 2 + riverTop) / 2 + 6);
-    }
-    // 两边的河岸
-    sand(Screen.W, 22, 0, riverTop + 9);
-    sand(Screen.W, 22, 0, riverC - RIVER_H / 2 - 9);
-    // 排队区的沙地：按列数定宽
+    const g = box('sand', ground).addComponent(Graphics);
     const T = this.s.tracks.length;
-    sand(Station.trackSpan(T, Screen.W) + 76, Station.trackHeight() + 40, 0, trackTop - Station.trackHeight() / 2 + 6, true);
-    const piece = (o: (typeof sands)[number], grow: number, c: Color, name: string): void => {
-      if (o.round) {
-        const n = slice(ground, 'kit/round_white', o.w + grow * 2, o.h + grow * 2, name);
-        at(n, o.x, o.y);
-        paint(n, c);
-      } else at(tint(ground, o.w + grow * 2, o.h + grow * 2, c, name), o.x, o.y);
+    const patchW = Station.trackSpan(T, Screen.W) + 84;
+    const patchH = Station.trackHeight() + 44;
+    const patchY = trackTop - Station.trackHeight() / 2 + 8;
+    const riverBottom = riverC - RIVER_H / 2;
+    const sandPass = (grow: number, c: Color): void => {
+      g.fillColor = c;
+      g.strokeColor = c;
+      // 路基
+      g.rect(-Screen.W / 2 - 10, railY - 12 - grow, Screen.W + 20, 40 + grow * 2);
+      // 河岸（上、下）
+      g.rect(-Screen.W / 2 - 10, riverTop - 4 - grow, Screen.W + 20, 26 + grow * 2);
+      g.rect(-Screen.W / 2 - 10, riverBottom - 22 - grow, Screen.W + 20, 26 + grow * 2);
+      // 排队区的沙地
+      g.roundRect(-patchW / 2 - grow, patchY - patchH / 2 - grow, patchW + grow * 2, patchH + grow * 2, 46 + grow);
+      g.fill();
+      // 那圈路
+      g.lineWidth = PATH_W + grow * 2;
+      g.roundRect(f.l, f.b, f.r - f.l, f.t - f.b, RING_R);
+      g.stroke();
     };
-    for (const o of sands) piece(o, EDGE_W, SAND_EDGE, 'edge');
-    for (const o of sands) piece(o, 0, SAND, 'sand');
-    // 那圈路里面还是草地（和外面同一个颜色：整屏一个场景），也描一圈边
-    const inW = f.r - f.l - PATH_W;
-    const inH = f.t - f.b - PATH_W;
-    piece({ w: inW, h: inH, x: 0, y: fy, round: true }, 0, SAND_EDGE, 'innerEdge');
-    piece({ w: inW, h: inH, x: 0, y: fy, round: true }, -EDGE_W, GRASS, 'inner');
+    sandPass(EDGE_W, SAND_EDGE);
+    sandPass(0, SAND);
     // ---- 小河：水面是活的（流光、涟漪、睡莲、芦苇）。盖在河岸的沙地上面
     this.river(ground, riverC);
     this.board.build(this.s, intro, App.config.ui.intro.stagger);
@@ -515,36 +503,47 @@ export class GamePage extends Page {
     if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
   }
 
-  /** 草地上撒小摆设（草丛、小花、石子，角上放灌木）：排队区沙地两边、那圈路外面的空地。位置按关卡号定，同一关每次都一样 */
+  /** 草地上撒小摆设（草丛、小花、石子，角上放灌木）：那圈路里面画的四周、排队区沙地两边。位置按关卡号定，同一关每次都一样 */
   private decorate(ground: Node, trackTop: number): void {
     const f = this.field;
     const rng = new Rng(this.lv.id * 7919 + 17);
-    const half = Station.trackSpan(this.s.tracks.length, Screen.W) / 2 + 38 + 26;
+    const half = Station.trackSpan(this.s.tracks.length, Screen.W) / 2 + 42 + 26;
     const bottom = trackTop - Station.trackHeight() - 30;
-    const zones: [number, number, number, number][] = [
-      [-Screen.W / 2 + 14, f.l - PATH_W / 2 - 14, f.b + 40, f.t - 10],
-      [f.r + PATH_W / 2 + 14, Screen.W / 2 - 14, f.b + 40, f.t - 10],
-      [-Screen.W / 2 + 20, -half, bottom, trackTop - 4],
+    const in0 = PATH_W / 2 + 16;
+    // [左, 右, 下, 上, 最多放几个]
+    const zones: [number, number, number, number, number][] = [
+      [f.l + in0, f.r - in0, f.b + in0, f.t - in0, 14],
+      [-Screen.W / 2 + 20, -half, bottom, trackTop - 4, 9],
       // 右边上面是倍速开关，让开
-      [half, Screen.W / 2 - 20, bottom, trackTop - 64],
+      [half, Screen.W / 2 - 20, bottom, trackTop - 64, 9],
     ];
+    // 画占着的地方不放（留一圈空）；那圈路的四个圆角里面也不放（路往里拐了）
+    const px = this.board.width / 2 + 16;
+    const py = this.board.height / 2 + 20;
+    const blocked = (x: number, y: number, zone: number): boolean => {
+      if (zone !== 0) return false;
+      if (Math.abs(x - this.boardAt.x) < px && Math.abs(y - this.boardAt.y) < py) return true;
+      const cx = Math.min(x - f.l, f.r - x);
+      const cy = Math.min(y - f.b, f.t - y);
+      return cx < RING_R && cy < RING_R;
+    };
     const put: [number, number][] = [];
-    for (const [x0, x1, y0, y1] of zones) {
-      if (x1 - x0 < 20 || y1 - y0 < 24) continue;
-      const n = Math.min(9, Math.max(1, Math.round(((x1 - x0) * (y1 - y0)) / 4200)));
+    zones.forEach(([x0, x1, y0, y1, max], zi) => {
+      if (x1 - x0 < 20 || y1 - y0 < 24) return;
+      const n = Math.min(max, Math.max(1, Math.round(((x1 - x0) * (y1 - y0)) / 4200)));
       for (let i = 0; i < n; i++) {
         // 试几次找一个不和别的摆设挤在一起的位置，找不到就不放
-        for (let k = 0; k < 6; k++) {
+        for (let k = 0; k < 10; k++) {
           const x = x0 + rng.randf() * (x1 - x0);
           const y = y0 + rng.randf() * (y1 - y0);
-          if (put.some(([px, py]) => Math.hypot(px - x, py - y) < 40)) continue;
+          if (blocked(x, y, zi) || put.some(([qx, qy]) => Math.hypot(qx - x, qy - y) < 44)) continue;
           put.push([x, y]);
           const [path, h] = DECO[Math.floor(rng.randf() * DECO.length) % DECO.length];
           at(img(ground, path, undefined, h, 'deco'), x, y);
           break;
         }
       }
-    }
+    });
     // 下面两个角上各一丛灌木（半截在屏幕外），压住画面的角
     for (const sx of [-1, 1]) {
       at(img(ground, 'kit/deco_bush', undefined, 76, 'bush'), sx * (Screen.W / 2 - 22), bottom - 6);

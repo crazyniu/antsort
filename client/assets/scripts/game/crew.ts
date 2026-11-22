@@ -34,6 +34,8 @@ export interface Field {
   r: number;
   b: number;
   t: number;
+  /** 那圈路四个角的圆角半径（中线上的） */
+  rad: number;
   /** 方块现在在哪里（船上） */
   carPos: (car: CarView) => Vec3;
 }
@@ -135,13 +137,37 @@ export class Crew {
 
   // ---------------------------------------------------------------- 路线
 
-  /** 画四周那圈路上的一点，按「从左下角起逆时针走了多远」记 */
+  /** 那圈路的圆角半径（路太短时缩小） */
+  private get rad(): number {
+    const { l, r, b, t, rad } = this.field;
+    return Math.max(0, Math.min(rad, (r - l) / 2, (t - b) / 2));
+  }
+
+  /** 画四周那圈路上的一点，按「从左下角起逆时针走了多远」记（按直角的周长记）。四个角是圆的：离角不到一个半径的那一段落在圆弧上 */
   private ringAt(s: number): Vec3 {
     const { l, r, b, t } = this.field;
     const w = r - l;
     const h = t - b;
     const P = 2 * (w + h);
+    const R = this.rad;
     s = ((s % P) + P) % P;
+    if (R > 0) {
+      // 四个角：[在周长上的位置, 圆心 x, 圆心 y, 进这个角时的角度]
+      const corners: [number, number, number, number][] = [
+        [0, l + R, b + R, Math.PI],
+        [w, r - R, b + R, 1.5 * Math.PI],
+        [w + h, r - R, t - R, 0],
+        [2 * w + h, l + R, t - R, 0.5 * Math.PI],
+      ];
+      for (const [c, cx, cy, a0] of corners) {
+        let d = s - c;
+        if (d > P / 2) d -= P;
+        if (Math.abs(d) < R) {
+          const a = a0 + ((d + R) / (2 * R)) * (Math.PI / 2);
+          return new Vec3(cx + Math.cos(a) * R, cy + Math.sin(a) * R, 0);
+        }
+      }
+    }
     if (s <= w) return new Vec3(l + s, b, 0);
     if (s <= w + h) return new Vec3(r, b + (s - w), 0);
     if (s <= 2 * w + h) return new Vec3(r - (s - w - h), t, 0);
@@ -171,7 +197,10 @@ export class Crew {
     const sa = this.ringS(a);
     const sb = this.ringS(b);
     const fwd = (((sb - sa) % P) + P) % P;
-    const corners = [0, w, w + h, 2 * w + h];
+    // 每个角上取几个点：小人顺着圆弧拐弯
+    const R = this.rad;
+    const corners: number[] = [];
+    for (const c of [0, w, w + h, 2 * w + h]) for (const k of R > 0 ? [-1, -0.6, -0.2, 0.2, 0.6, 1] : [0]) corners.push(c + k * R);
     const out: Vec3[] = [];
     if (fwd <= P - fwd) {
       const list = corners.map((c) => (((c - sa) % P) + P) % P).filter((d) => d > 0.01 && d < fwd - 0.01);
@@ -191,7 +220,9 @@ export class Crew {
   private routeOut(job: Job): Vec3[] {
     const f = this.field;
     const from = f.carPos(job.car);
-    const bank = new Vec3(Math.min(f.r, Math.max(f.l, from.x)), f.b, 0);
+    // 落点避开两头的圆角（那里路往里拐了）
+    const R = this.rad;
+    const bank = new Vec3(Math.min(f.r - R, Math.max(f.l + R, from.x)), f.b, 0);
     const pts: Vec3[] = [bank];
     pts.push(...this.ring(bank, job.inside[0]));
     for (let i = 1; i < job.inside.length; i++) pts.push(job.inside[i]);
@@ -201,7 +232,9 @@ export class Crew {
   /** 抱着豆去火车的路：原路退到那圈路上，绕到画上面车厢那一格，再往上走到车厢边 */
   private routeBack(job: Job, d: Drop): Vec3[] {
     const pts: Vec3[] = [];
-    for (let i = job.inside.length - 2; i >= 0; i--) pts.push(job.inside[i]);
+    for (let i = job.inside.length - 2; i >= 1; i--) pts.push(job.inside[i]);
+    // 回到路上：第 0 个点落到路的中线上（角上是圆弧）
+    pts.push(this.ringAt(this.ringS(job.inside[0])));
     const below = new Vec3(Math.min(this.field.r, Math.max(this.field.l, d.x)), this.field.t, 0);
     pts.push(...this.ring(job.inside[0], below));
     pts.push(new Vec3(d.x, d.y, 0));

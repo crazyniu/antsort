@@ -4,14 +4,14 @@ import { Color, Node, Sprite, Vec3, tween } from 'cc';
 import { at, box, img, opacity } from '../ui/kit';
 
 /** 车头、车厢显示多大（kit/loco、kit/wagon_*，client/tools/art/sprites.py 切出来的） */
-const LOCO_W = 130;
-const LOCO_H = 96;
-const WAGON_W = 105;
-const WAGON_H = 66;
+const LOCO_W = 156;
+const LOCO_H = 115;
+const WAGON_W = 126;
+const WAGON_H = 79;
 /** 车厢里一排放几颗小方块、每颗多大、一排比一排高多少 */
 const COLS = 5;
-const CUBE = 17;
-const ROW_LIFT = 7;
+const CUBE = 21;
+const ROW_LIFT = 10;
 
 export interface Drop {
   /** 第几列火车 */
@@ -194,7 +194,7 @@ export class Train {
       if (L.color[wagon] < 0) L.color[wagon] = color;
       const index = L.resv[wagon]++;
       // 火车在画的上面：小人站在铁轨下沿放豆
-      return { train: k, wagon, index, x: this.homeX() + this.wagonX(wagon), y: this.y - 26 };
+      return { train: k, wagon, index, x: this.homeX() + this.wagonX(wagon), y: this.y - 30 };
     }
   }
 

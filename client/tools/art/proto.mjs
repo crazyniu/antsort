@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 代码画的图（SVG，按 3 倍渲染）：拼豆、小队方块、铁轨、三个技能图标。小人、火车、小桥、花草是 Codex 画的，由 tools/art/sprites.py 切出来。
+// 代码画的图（SVG，按 3 倍渲染）：拼豆、小人抱着的豆、小队方块、铁轨、三个技能图标。小人、火车、小船、花草是 Codex 画的，由 tools/art/sprites.py 切出来。
 // 白色的图（bead、block_body）局内按颜色染色：白 → 那个颜色，灰 → 深一档。
 // 用法：node tools/art/proto.mjs，然后 ./run.sh art-compress（量化 + 补 .meta）
 import { Resvg } from '@resvg/resvg-js';
@@ -20,44 +20,71 @@ function out(path, w, h, body) {
   console.log(`✓ ${path}.png ${w * RES}×${h * RES}`);
 }
 
-// ---- 拼豆（显示 40 × 50）：带厚度的小方块。上面的面只占一格的八成多（33），下面永远露一条侧面，
-// 整幅画看着是一颗颗凸起来的；面是纯白（染出来就是色板上那个颜色，不压暗），四边一圈细的深线把相邻的豆分开。
-// 局内整张染色：白 → 豆的颜色，灰 → 深一档
+// ---- 拼豆（显示 40 × 50）：带厚度的小方块，照效果图的样子：圆角的面只占一格的八成多（33），下面永远露一条深一档的侧面，
+// 整幅画是一颗颗凸起来的。面是纯白（染出来就是色板上那个颜色，不压暗）。面的圆角外面垫着同色深一档的底，
+// 相邻的豆之间看到的缝是这个颜色深一点的样子，不会透出下面的草地。局内整张染色：白 → 豆的颜色，灰 → 深一档
 out(
   'kit/bead',
   40,
   50,
-  `<rect x="0" y="8" width="40" height="42" rx="7" fill="#a8a8a8"/>
-   <rect x="0" y="0" width="40" height="33" rx="7" fill="#dbdbdb"/>
-   <rect x="1.2" y="1.2" width="37.6" height="30.6" rx="6" fill="#ffffff"/>`,
+  `<rect x="0" y="0" width="40" height="24" fill="#cdcdcd"/>
+   <rect x="0" y="8" width="40" height="42" rx="6" fill="#bababa"/>
+   <rect x="0.8" y="0.8" width="38.4" height="32.4" rx="7.5" fill="#ffffff"/>`,
 );
 
-// ---- 拼豆的高光片（显示 40 × 50，不染色，叠在豆上面）：面上从左上往下淡出的一片柔光、角上一小条高光、侧面下沿压暗。
+// ---- 拼豆的高光片（显示 40 × 50，不染色，叠在豆上面）：面的上半截一片柔光、左上角一小条高光、侧面下沿压暗一点。
 // 豆本体是整张染色的（乘法染色提不亮），光泽只能用这张不染色的叠出来；柔光不能重，重了颜色发白
 out(
   'kit/bead_top',
   40,
   50,
-  `<defs><linearGradient id="g" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="0.6" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-   <rect x="1.2" y="1.2" width="37.6" height="30.6" rx="6" fill="url(#g)"/>
-   <rect x="5" y="4.5" width="12" height="5" rx="2.5" fill="#fff" fill-opacity="0.8"/>
-   <rect x="0" y="39" width="40" height="11" rx="5" fill="#000" fill-opacity="0.08"/>`,
+  `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.34"/><stop offset="0.62" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+   <rect x="0.8" y="0.8" width="38.4" height="32.4" rx="7.5" fill="url(#g)"/>
+   <rect x="5.5" y="4.5" width="10" height="4.5" rx="2.25" fill="#fff" fill-opacity="0.6"/>
+   <rect x="0" y="40" width="40" height="10" rx="5" fill="#000" fill-opacity="0.06"/>`,
 );
 
-// ---- 小队方块（显示 100 × 92）：圆角方块，下面压一道深边；整张染色
+// ---- 小人抱着的豆（显示 40 × 44）：斜着看的小方块，看得到上面和两个侧面；整张染色
+out(
+  'kit/cube',
+  40,
+  44,
+  `<g stroke-linejoin="round" stroke-width="2">
+   <path d="M2 11 L20 21 L20 42 L2 32 Z" fill="#d4d4d4" stroke="#d4d4d4"/>
+   <path d="M20 21 L38 11 L38 32 L20 42 Z" fill="#a9a9a9" stroke="#a9a9a9"/>
+   <path d="M20 2 L38 11 L20 21 L2 11 Z" fill="#ffffff" stroke="#ffffff"/></g>`,
+);
+// 抱着的豆的高光（不染色）：上面那一面亮一点
+out(
+  'kit/cube_top',
+  40,
+  44,
+  `<path d="M20 3 L36 11 L20 19.5 L4 11 Z" fill="#fff" fill-opacity="0.3"/>
+   <path d="M8 10 L19 4.5 L22 6 L11 11.5 Z" fill="#fff" fill-opacity="0.45"/>`,
+);
+
+// ---- 小队方块（显示 100 × 84）：圆角方块，下面压一道厚的深边（比例照效果图：扁一点、底边厚）；整张染色
 out(
   'kit/block_body',
   100,
-  92,
-  `<rect x="0" y="12" width="100" height="80" rx="20" fill="#a8a8a8"/>
-   <rect x="0" y="0" width="100" height="78" rx="20" fill="#fff"/>`,
+  84,
+  `<rect x="0" y="16" width="100" height="68" rx="20" fill="#b0b0b0"/>
+   <rect x="0" y="0" width="100" height="68" rx="20" fill="#fff"/>`,
+);
+// 方块面上的高光（不染色，叠在方块上）：上半截一片柔光
+out(
+  'kit/block_top',
+  100,
+  84,
+  `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+   <rect x="5" y="4" width="90" height="30" rx="15" fill="url(#g)"/>`,
 );
 // 最前排的白边
 out(
   'kit/block_rim',
   112,
-  104,
-  `<rect x="3" y="3" width="106" height="98" rx="25" fill="none" stroke="#fff" stroke-width="6"/>`,
+  96,
+  `<rect x="3" y="3" width="106" height="90" rx="25" fill="none" stroke="#fff" stroke-width="6"/>`,
 );
 
 // ---- 铁轨（显示 60 × 18，横着平铺）

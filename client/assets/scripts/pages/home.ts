@@ -485,23 +485,24 @@ export class HomePage extends Page {
     board.build(GameState.fromLevel(lv), false);
     fx.bob(holder, 5, 3);
     // 小火车：一节车厢 + 车头，停在画下面；两个小人站在旁边
-    const y = -150;
+    const y = -205;
     for (let x = -150; x <= 150; x += 60) at(img(root, 'kit/track', 60, 18, 'track'), x, y + 3);
     const wagon = box('wagon', root, 96, 72);
-    at(wagon, -62, y + 36);
-    img(wagon, 'kit/wagon_back', 96, 72, 'back');
+    at(wagon, -66, y + 33);
+    img(wagon, 'kit/wagon_back', 105, 66, 'back');
     lv.palette.slice(0, 4).forEach((c, i) => {
       const cube = img(wagon, 'kit/bead', 20, 25, 'cube');
       (cube.getComponent(Sprite) as Sprite).color = hex(c);
-      at(cube, (i - 1.5) * 21, 2);
+      at(cube, (i - 1.5) * 21, 12);
     });
-    img(wagon, 'kit/wagon_front', 96, 72, 'front');
-    at(img(root, 'kit/loco', 128, 92, 'loco'), 52, y + 45);
+    img(wagon, 'kit/wagon_front', 105, 66, 'front');
+    at(img(root, 'kit/loco', 130, 96, 'loco'), 54, y + 46);
     lv.palette.slice(0, 2).forEach((c, i) => {
-      const w = box('worker', root, 34, 41);
-      at(w, i === 0 ? -148 : 148, y + 26);
-      (img(w, 'kit/worker_body', 34, 41, 'body').getComponent(Sprite) as Sprite).color = hex(c);
-      img(w, 'kit/worker_top', 34, 41, 'top');
+      const w = box('worker', root, 40, 48);
+      at(w, i === 0 ? -152 : 152, y + 26);
+      w.setScale(i === 0 ? 1 : -1, 1, 1);
+      (img(w, 'kit/worker_body_0', undefined, 48, 'body').getComponent(Sprite) as Sprite).color = hex(c);
+      img(w, 'kit/worker_top_0', undefined, 48, 'top');
       fx.bob(w, 4, 0.9, i * 0.4);
     });
     fx.popIn(root, 0, 0.3, root.scale.x);

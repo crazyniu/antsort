@@ -10,7 +10,7 @@ import { COLOR, at, box, img, onTap, opacity, resizeSlice, setSlice, slice, text
 export const CAR_W = 100;
 export const CAR_H = 92;
 /** 上场位的格子多高 */
-const PAD_H = 104;
+const PAD_H = 100;
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */
 const QUEUE_K = 0.82;
 const ROW_H = 80;
@@ -44,6 +44,8 @@ export class Station {
   tracks: CarView[][] = [];
   private pads: Node[] = [];
   private plusPad: Node | null = null;
+  /** 垫在所有格子下面的一整块托盘 */
+  private tray: Node | null = null;
   private more: Label[] = [];
   private warn = false;
 
@@ -142,16 +144,23 @@ export class Station {
     if (!instant && count > this.places.length) this.plus = false;
     while (this.places.length < count) this.places.push(null);
     const w = this.placeW();
+    if (!this.tray) {
+      this.tray = slice(this.stage, 'kit/slot', 10, PAD_H + 16, 'tray');
+      this.tray.setSiblingIndex(0);
+      opacity(this.tray).opacity = 150;
+    }
+    resizeSlice(this.tray, this.padCount() * w + 12, PAD_H + 16);
+    at(this.tray, 0, this.stationY);
     while (this.pads.length < count) {
       const pad = slice(this.stage, 'kit/slot', w - 10, PAD_H, 'pad');
-      // 格子垫在方块下面
-      pad.setSiblingIndex(0);
+      // 格子垫在方块下面、托盘上面
+      pad.setSiblingIndex(1);
       this.pads.push(pad);
       if (!instant) fx.popIn(pad, 0, 0.25);
     }
     if (this.plus && !this.plusPad) {
       const pad = slice(this.stage, 'kit/slot', w - 10, PAD_H, 'plus');
-      pad.setSiblingIndex(0);
+      pad.setSiblingIndex(1);
       opacity(pad).opacity = 170;
       text(pad, '+', 56, { color: COLOR.white });
       onTap(pad, () => this.onPlus());
@@ -198,7 +207,7 @@ export class Station {
     const node = box('car', this.stage, CAR_W, CAR_H);
     const rim = img(node, 'kit/block_rim', CAR_W + 12, CAR_H + 12, 'rim');
     const body = img(node, 'kit/block_body', CAR_W, CAR_H, 'body');
-    const label = text(null, String(left), 44, { color: COLOR.white, outline: new Color(30, 34, 48, 255), outlineWidth: 5 });
+    const label = text(null, String(left), 50, { color: COLOR.white, outline: new Color(30, 34, 48, 255), outlineWidth: 5 });
     node.addChild(label.node);
     at(label.node, 0, 7);
     const wait = box('wait', node, 34, 34);

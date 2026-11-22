@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 原型用的图（代码画的 SVG，按 3 倍渲染）：拼豆、小队方块、小人、火车、铁轨、小桥、三个技能图标。正式美术由 Codex 出（docs/03），到时同名替换。
-// 白色的图（bead、block_body、worker_body）局内按颜色染色：白 → 那个颜色，灰 → 深一档。
+// 代码画的图（SVG，按 3 倍渲染）：拼豆、小队方块、铁轨、三个技能图标。小人、火车、小桥、花草是 Codex 画的，由 tools/art/sprites.py 切出来。
+// 白色的图（bead、block_body）局内按颜色染色：白 → 那个颜色，灰 → 深一档。
 // 用法：node tools/art/proto.mjs，然后 ./run.sh art-compress（量化 + 补 .meta）
 import { Resvg } from '@resvg/resvg-js';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -49,67 +49,6 @@ out(
   `<rect x="3" y="3" width="106" height="98" rx="25" fill="none" stroke="#fff" stroke-width="6"/>`,
 );
 
-// ---- 小人（显示 40 × 48）：俯视 3/4 的圆头小搬运工。*_body 是帽子和衣服（白的，局内染成小队的颜色），*_top 是脸、手、脚
-out(
-  'kit/worker_body',
-  40,
-  48,
-  `<rect x="10.5" y="26" width="19" height="17" rx="7.5" fill="#fff"/>
-   <rect x="10.5" y="36" width="19" height="7" rx="3.5" fill="#c9c9c9"/>
-   <path d="M7 18 A13 13 0 0 1 33 18 Z" fill="#fff"/>
-   <rect x="5" y="15.5" width="30" height="5.5" rx="2.75" fill="#dcdcdc"/>`,
-);
-out(
-  'kit/worker_top',
-  40,
-  48,
-  `<ellipse cx="14.5" cy="44.5" rx="5" ry="3.2" fill="#3a3348"/>
-   <ellipse cx="25.5" cy="44.5" rx="5" ry="3.2" fill="#3a3348"/>
-   <path d="M8.5 21 H31.5 A11.5 10.5 0 0 1 8.5 21 Z" fill="#ffd9b3"/>
-   <circle cx="15.3" cy="24.6" r="1.9" fill="#3a3348"/><circle cx="24.7" cy="24.6" r="1.9" fill="#3a3348"/>
-   <ellipse cx="12" cy="27.4" rx="2.2" ry="1.3" fill="#ff9d8a" fill-opacity="0.7"/><ellipse cx="28" cy="27.4" rx="2.2" ry="1.3" fill="#ff9d8a" fill-opacity="0.7"/>
-   <circle cx="8.6" cy="33.5" r="3.6" fill="#ffd9b3"/><circle cx="31.4" cy="33.5" r="3.6" fill="#ffd9b3"/>`,
-);
-
-// ---- 火车头（显示 156 × 112，朝右）
-out(
-  'kit/loco',
-  156,
-  112,
-  `<rect x="100" y="14" width="18" height="30" rx="3" fill="#3a3348"/>
-   <rect x="95" y="10" width="28" height="9" rx="4.5" fill="#55506a"/>
-   <rect x="52" y="44" width="84" height="40" rx="14" fill="#f2473b"/>
-   <rect x="52" y="68" width="84" height="16" rx="8" fill="#c2332a"/>
-   <rect x="74" y="44" width="8" height="40" fill="#ffc531"/>
-   <rect x="8" y="22" width="52" height="62" rx="8" fill="#f2473b"/>
-   <rect x="8" y="66" width="52" height="18" rx="8" fill="#c2332a"/>
-   <rect x="2" y="14" width="64" height="12" rx="6" fill="#c2332a"/>
-   <rect x="18" y="32" width="30" height="24" rx="5" fill="#bfe8ff"/>
-   <circle cx="138" cy="60" r="9" fill="#ffc531"/><circle cx="138" cy="60" r="4.5" fill="#fff3c4"/>
-   <path d="M134 84 H150 L156 100 H134 Z" fill="#9aa3b2"/>
-   <rect x="4" y="82" width="140" height="10" rx="5" fill="#3a3348"/>
-   <circle cx="26" cy="94" r="15" fill="#3a3348"/><circle cx="26" cy="94" r="6.5" fill="#ffc531"/>
-   <circle cx="70" cy="97" r="12" fill="#3a3348"/><circle cx="70" cy="97" r="5" fill="#ffc531"/>
-   <circle cx="104" cy="97" r="12" fill="#3a3348"/><circle cx="104" cy="97" r="5" fill="#ffc531"/>`,
-);
-// ---- 车厢（显示 112 × 84）：*_back 是斗里面，*_front 是前挡板和轮子；装的小方块夹在两张中间
-out(
-  'kit/wagon_back',
-  112,
-  84,
-  `<rect x="8" y="26" width="96" height="40" rx="5" fill="#6a3d1c"/>`,
-);
-out(
-  'kit/wagon_front',
-  112,
-  84,
-  `<rect x="0" y="60" width="112" height="6" rx="3" fill="#3a3348"/>
-   <rect x="4" y="38" width="104" height="30" rx="7" fill="#c47a35"/>
-   <rect x="4" y="56" width="104" height="12" rx="6" fill="#96571f"/>
-   <rect x="4" y="38" width="104" height="7" rx="3.5" fill="#e09a52"/>
-   <circle cx="28" cy="72" r="11" fill="#3a3348"/><circle cx="28" cy="72" r="4.5" fill="#cfd6e4"/>
-   <circle cx="84" cy="72" r="11" fill="#3a3348"/><circle cx="84" cy="72" r="4.5" fill="#cfd6e4"/>`,
-);
 // ---- 铁轨（显示 60 × 18，横着平铺）
 out(
   'kit/track',
@@ -118,18 +57,6 @@ out(
   `<rect x="4" y="7" width="12" height="11" rx="2" fill="#8a5a2c"/><rect x="24" y="7" width="12" height="11" rx="2" fill="#8a5a2c"/><rect x="44" y="7" width="12" height="11" rx="2" fill="#8a5a2c"/>
    <rect x="0" y="2" width="60" height="6" fill="#aab3c2"/><rect x="0" y="6" width="60" height="2" fill="#7f8898"/>`,
 );
-// ---- 小桥（显示 84 × 160，竖着跨过铁轨）
-out(
-  'kit/bridge',
-  84,
-  160,
-  `<rect x="6" y="0" width="72" height="160" rx="10" fill="#d9dde6"/>
-   <path d="M6 32 H78 M6 64 H78 M6 96 H78 M6 128 H78" stroke="#b9c0cd" stroke-width="3"/>
-   <path d="M42 0 V32 M24 32 V64 M60 32 V64 M42 64 V96 M24 96 V128 M60 96 V128 M42 128 V160" stroke="#b9c0cd" stroke-width="3"/>
-   <rect x="0" y="0" width="12" height="160" rx="6" fill="#9aa3b2"/><rect x="72" y="0" width="12" height="160" rx="6" fill="#9aa3b2"/>
-   <rect x="0" y="0" width="12" height="160" rx="6" fill="none"/>`,
-);
-
 // ---- 技能图标（显示 128 × 128）
 const plate = (c1, c2) =>
   `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;

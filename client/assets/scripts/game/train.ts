@@ -3,11 +3,11 @@
 import { Color, Node, Sprite, Vec3, tween } from 'cc';
 import { at, box, img, opacity } from '../ui/kit';
 
-/** 车头、车厢显示多大（kit/loco 156×112、kit/wagon_* 112×84 再缩一点） */
-const LOCO_W = 128;
-const LOCO_H = 92;
-const WAGON_W = 96;
-const WAGON_H = 72;
+/** 车头、车厢显示多大（kit/loco、kit/wagon_*，client/tools/art/sprites.py 切出来的） */
+const LOCO_W = 130;
+const LOCO_H = 96;
+const WAGON_W = 105;
+const WAGON_H = 66;
 /** 车厢里一排放几颗小方块、每颗多大 */
 const COLS = 4;
 const CUBE = 20;
@@ -86,7 +86,7 @@ export class Train {
       img(w, 'kit/wagon_front', WAGON_W, WAGON_H, 'front');
       this.wagons.push({ node: w, cubes });
     }
-    at(img(this.node, 'kit/loco', LOCO_W, LOCO_H, 'loco'), len / 2 - LOCO_W / 2, LOCO_H / 2 - 1);
+    at(img(this.node, 'kit/loco', LOCO_W, LOCO_H, 'loco'), len / 2 - LOCO_W / 2, LOCO_H / 2 - 2);
   }
 
   private arrive(): void {
@@ -170,7 +170,8 @@ export class Train {
       const cube = img(w.cubes, 'kit/bead', CUBE, CUBE * 1.25, 'cube');
       (cube.getComponent(Sprite) as Sprite).color = this.colors[color] ?? Color.WHITE;
       const x = (col - (COLS - 1) / 2) * (CUBE + 1);
-      const y = -6 + row * (CUBE * 0.72);
+      // 第一排大半截藏在前挡板后面，往上一排排码出斗口
+      const y = 12 + row * (CUBE * 0.72);
       // 从上往下数：后放的在上面一排，要画在下面一排的后面（下面一排盖住它的侧面）
       cube.setSiblingIndex(0);
       at(cube, x, y + 16);

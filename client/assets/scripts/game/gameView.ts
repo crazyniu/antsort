@@ -59,11 +59,22 @@ const SKILL_GAP = 28;
 const BADGE_W = 42;
 const BADGE_H = 36;
 /** 画四周那圈路：中线离画多远、路多宽；草地和沙子路的颜色 */
-const PATH_OUT = 26;
-const PATH_W = 44;
+const PATH_OUT = 24;
+const PATH_W = 38;
 const GRASS = new Color(140, 211, 106, 255);
 const GRASS_IN = new Color(154, 220, 120, 255);
 const SAND = new Color(244, 222, 164, 255);
+/** 小桥的图宽 ÷ 高 */
+const BRIDGE_ASPECT = 0.82;
+/** 草地上的小摆设：[图, 显示多高] */
+const DECO: [string, number][] = [
+  ['kit/deco_tuft1', 24],
+  ['kit/deco_tuft2', 24],
+  ['kit/deco_flower', 30],
+  ['kit/deco_bush', 42],
+  ['kit/deco_pebble', 14],
+  ['kit/deco_tuft1', 22],
+];
 /** 倍速开关：开着就一直开着，换关不重置 */
 let fast = false;
 
@@ -428,7 +439,10 @@ export class GamePage extends Page {
       this.lastDropSfx = this.vnow;
       sfx('bowl', 0, 0.3);
     });
-    at(img(this.stage, 'kit/bridge', 84, ringB - laneY + PATH_W, 'bridge'), f.bridgeX, (ringB + laneY) / 2);
+    // 小桥：跨过铁轨，桥面的两头接着下面的小路和上面那圈路
+    const bridgeH = ringB - laneY + PATH_W + 6;
+    at(img(this.stage, 'kit/bridge', bridgeH * BRIDGE_ASPECT, bridgeH, 'bridge'), f.bridgeX, (ringB + laneY) / 2);
+    this.decorate(ground);
     // ---- 上场位、排队区、已经在场上的方块（复活后重画）
     this.station = new Station(
       this.stage,
@@ -470,6 +484,25 @@ export class GamePage extends Page {
 
   private refreshSpeed(): void {
     if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
+  }
+
+  /** 草地上撒几样小摆设：只放在那圈路外面的空地上（左右两条、上面一条），位置按关卡号定，同一关每次都一样 */
+  private decorate(ground: Node): void {
+    const f = this.field;
+    const rng = new Rng(this.lv.id * 7919 + 17);
+    const zones: [number, number, number, number][] = [
+      [-Screen.W / 2 + 14, f.l - PATH_W / 2 - 16, f.b + 70, f.t + 10],
+      [f.r + PATH_W / 2 + 16, Screen.W / 2 - 14, f.b + 110, f.t + 10],
+      [-Screen.W / 2 + 20, Screen.W / 2 - 20, f.t + PATH_W / 2 + 16, this.fieldTop - 12],
+    ];
+    for (const [x0, x1, y0, y1] of zones) {
+      if (x1 - x0 < 24 || y1 - y0 < 24) continue;
+      const n = Math.max(1, Math.round(((x1 - x0) * (y1 - y0)) / 9000));
+      for (let i = 0; i < Math.min(6, n); i++) {
+        const [path, h] = DECO[Math.floor(rng.randf() * DECO.length) % DECO.length];
+        at(img(ground, path, undefined, h, 'deco'), x0 + rng.randf() * (x1 - x0), y0 + rng.randf() * (y1 - y0));
+      }
+    }
   }
 
   /** 画上第 x 列第 y 行的中心，在特效层里的坐标（可以在画外面一圈） */

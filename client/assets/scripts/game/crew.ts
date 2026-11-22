@@ -1,15 +1,15 @@
 // 小人（docs/01 第 3 节）：从上场的方块里跑出来 → 过小桥 → 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
 // → 绕回铁轨边放进车厢。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
 // 出发的先后要守住一条：后一轮才露出来的豆，不能比前一轮的豆先被搬走（不然看着像是从里面掏的）。
-import { Color, Node, Sprite, Vec3 } from 'cc';
-import { at, box, img } from '../ui/kit';
+import { Color, Node, Sprite, SpriteFrame, Vec3 } from 'cc';
+import { at, box, img, size } from '../ui/kit';
+import { frame } from '../ui/res';
 import type { CarView } from './station';
 import type { Drop, Train } from './train';
 
-/** 小人显示多大（kit/worker_*）、手里的豆多大 */
-const W = 34;
-const H = 41;
-const CUBE = 17;
+/** 小人显示多高（kit/worker_body_0..3 / worker_top_0..3：走路两帧、举着手走两帧）、手里的豆多大 */
+const H = 48;
+const CUBE = 18;
 
 export interface Job {
   car: CarView;
@@ -51,6 +51,8 @@ interface Walker {
   ox: number;
   oy: number;
   step: number;
+  /** 现在显示的是第几帧（-1 = 还没定） */
+  fi: number;
 }
 
 export class Crew {
@@ -67,6 +69,9 @@ export class Crew {
   private prevDone = 0;
   /** 小人的时间（秒，按倍速走） */
   now = 0;
+  private bodyF: SpriteFrame[] = [];
+  private topF: SpriteFrame[] = [];
+  private w = H;
 
   constructor(
     layer: Node,
@@ -80,6 +85,16 @@ export class Crew {
     this.bodyL = box('bodies', layer);
     this.topL = box('tops', layer);
     this.cubeL = box('cubes', layer);
+    for (let i = 0; i < 4; i++) {
+      const b = frame(`kit/worker_body_${i}`);
+      const p = frame(`kit/worker_top_${i}`);
+      if (b && p) {
+        this.bodyF.push(b);
+        this.topF.push(p);
+      }
+    }
+    const s = this.bodyF[0]?.originalSize;
+    if (s) this.w = (H * s.width) / s.height;
   }
 
   /** 排进一颗要搬的豆（按批号从小到大排进来） */
@@ -254,17 +269,24 @@ export class Crew {
 
   /** 摆到位置上：走路时左右晃、上下颠 */
   private draw(w: Walker, step: number): void {
-    w.step += step * 14;
-    const hop = Math.abs(Math.sin(w.step)) * 3;
-    const lean = Math.sin(w.step) * 7;
+    w.step += step * 13;
+    // 两帧换着来就是迈步；抱着豆的时候用举着手的那两帧。站着等的不动
+    const walking = w.phase !== 2;
+    const fi = (w.cube.active ? 2 : 0) + (walking ? Math.floor(w.step / Math.PI) % 2 : 0);
+    if (fi !== w.fi) {
+      w.fi = fi;
+      (w.body.getComponent(Sprite) as Sprite).spriteFrame = this.bodyF[fi] ?? null;
+      (w.top.getComponent(Sprite) as Sprite).spriteFrame = this.topF[fi] ?? null;
+      size(w.body, this.w, H);
+      size(w.top, this.w, H);
+    }
+    const hop = walking ? Math.abs(Math.sin(w.step)) * 2.5 : 0;
     const x = w.x + w.ox;
     const y = w.y + w.oy + hop;
-    at(w.body, x, y + H * 0.3);
-    at(w.top, x, y + H * 0.3);
-    w.body.angle = lean;
-    w.top.angle = lean;
+    at(w.body, x, y + H * 0.34);
+    at(w.top, x, y + H * 0.34);
     w.top.setScale(w.body.scale.x, 1, 1);
-    if (w.cube.active) at(w.cube, x, y + H * 0.3 + H * 0.56);
+    if (w.cube.active) at(w.cube, x, y + H * 0.34 + H * 0.56);
   }
 
   /** 该出发的出发：每个方块隔 gap 秒放一个；后一批的要等前一批都出发了，而且不能比前一批先到 */
@@ -307,8 +329,8 @@ export class Crew {
     let w = this.pool.pop();
     if (!w) {
       w = {
-        body: img(this.bodyL, 'kit/worker_body', W, H, 'w'),
-        top: img(this.topL, 'kit/worker_top', W, H, 'w'),
+        body: img(this.bodyL, 'kit/worker_body_0', this.w, H, 'w'),
+        top: img(this.topL, 'kit/worker_top_0', this.w, H, 'w'),
         cube: img(this.cubeL, 'kit/bead', CUBE, CUBE * 1.25, 'c'),
         job,
         pts,
@@ -320,6 +342,7 @@ export class Crew {
         ox: 0,
         oy: 0,
         step: 0,
+        fi: 0,
       };
     }
     w.job = job;
@@ -332,6 +355,7 @@ export class Crew {
     w.ox = (Math.random() - 0.5) * 14;
     w.oy = (Math.random() - 0.5) * 14;
     w.step = Math.random() * 6;
+    w.fi = -1;
     const col = this.colors[job.color] ?? Color.WHITE;
     (w.body.getComponent(Sprite) as Sprite).color = col;
     (w.cube.getComponent(Sprite) as Sprite).color = col;

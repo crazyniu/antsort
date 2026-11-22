@@ -234,12 +234,6 @@
     "cap": "ads"
    },
    {
-    "id": "combo",
-    "goal": 6,
-    "points": 20,
-    "mode": "max"
-   },
-   {
     "id": "play",
     "goal": 5,
     "points": 20
@@ -321,15 +315,15 @@
   ]
  },
  "features": {
-  "signin": 3,
+  "signin": 2,
   "skill_slot": 4,
   "skill_shunt": 8,
   "skill_magnet": 16,
   "levelSelect": 5,
-  "album": 8,
+  "album": 7,
   "wheel": 10,
-  "tasks": 11,
-  "daily": 20
+  "tasks": 12,
+  "daily": 14
  },
  "chest": {
   "normal": {

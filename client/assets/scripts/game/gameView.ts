@@ -127,6 +127,7 @@ export class GamePage extends Page {
   private pendingWin = false;
   private pendingLose = false;
   private lastPickSfx = 0;
+  private lastDropSfx = 0;
   /** 画面上已经搬走了几颗（顶栏的进度） */
   private shownCarried = 0;
   private speedLabel: Label | null = null;
@@ -415,10 +416,17 @@ export class GamePage extends Page {
     let perWagon = tc.perWagon;
     if (this.total < tc.wagons * perWagon * tc.minTrains) perWagon = Math.max(4, Math.ceil(this.total / (tc.wagons * tc.minTrains) / 4) * 4);
     const rail = box('rail', this.stage);
-    this.train = new Train(rail, this.board.colors, Screen.W, railY, tc.wagons, perWagon, this.total, this.shownCarried, cfg.trainMove, () => this.speed, (last) => {
-      sfx('depart');
-      buzz('light');
-      if (!last) return;
+    this.train = new Train(rail, this.board.colors, Screen.W, railY, tc.wagons, perWagon, this.total, this.shownCarried, cfg.trainMove, () => this.speed, (kind) => {
+      // 进站：一阵「哧哧」；开走：先鸣笛
+      if (kind === 'out') {
+        sfx('whistle');
+        buzz('light');
+      }
+      sfx('chug', 0, kind === 'out' ? 0.8 : 0.5);
+    }, () => {
+      if (this.vnow - this.lastDropSfx < 0.09) return;
+      this.lastDropSfx = this.vnow;
+      sfx('bowl', 0, 0.3);
     });
     at(img(this.stage, 'kit/bridge', 84, ringB - laneY + PATH_W, 'bridge'), f.bridgeX, (ringB + laneY) / 2);
     // ---- 上场位、排队区、已经在场上的方块（复活后重画）
@@ -771,7 +779,8 @@ export class GamePage extends Page {
       const x = car.node.position.x;
       this.station.leave(car);
       this.out.delete(car);
-      sfx('hit', 2);
+      sfx('done');
+      buzz('light');
       fx.sparkle(this.fly, x, this.stationY, 10, 110, this.board.colors[car.c], 28);
     }
     this.refreshHud();

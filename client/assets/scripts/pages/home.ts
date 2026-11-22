@@ -7,15 +7,18 @@ import * as Album from '../core/meta/album';
 import * as DailyChallenge from '../core/meta/dailyChallenge';
 import * as Features from '../core/meta/features';
 import * as SignIn from '../core/meta/signIn';
+import * as Meta from '../core/meta/meta';
 import * as Tasks from '../core/meta/tasks';
+import { GameState } from '../core/dig/rules';
 import * as Wheel from '../core/meta/wheel';
 import { App } from '../services/app';
 import { buzz, sfx } from '../services/audio';
 import { today } from '../services/clock';
+import { Board } from '../game/board';
 import * as Flow from '../game/flow';
 import * as fx from '../ui/fx';
 import { tr } from '../ui/i18n';
-import { Btn, PLATE_TEXT_LIFT, at, box, button, fit, fxImg, hex, img, lazyImg, onTap, opacity, plate, recycleFx, redDot, text } from '../ui/kit';
+import { Btn, PLATE_TEXT_LIFT, at, box, button, fit, fxImg, hex, img, lazyImg, onTap, opacity, plate, recycleFx, redDot, slice, text } from '../ui/kit';
 import { openPopup } from '../ui/popup';
 import { settingsPopup } from '../ui/popups';
 import { Screen } from '../ui/screen';
@@ -104,6 +107,9 @@ export class HomePage extends Page {
   private startW = 0;
   /** 展示区：一个光球一个主角 */
   private heroes: Orb[] = [];
+  /** 展示区（玩法）：下一关的拼豆画摆在一块底板上，下面停着小火车 */
+  private showcase!: Node;
+  private showcaseLevel = -1;
   /** 每次进主页重新起一轮动画；上一轮还没到点的定时回调看到号变了就不再接着跑 */
   private animGen = 0;
   /** 动态光照：光柱、地面的光斑、空中的亮点（盖在背景上、展示区和入口下面） */
@@ -143,6 +149,10 @@ export class HomePage extends Page {
       onTap(b, () => this.poke(b), { press: 0, sound: null });
       this.heroes.push({ node: b, home: b.position.clone(), drift, hero: f, dir, shell, sheen, r: D / 2 });
     }
+    // 展示区（玩法）：下一关的拼豆画 + 小火车。画在 refresh() 里按当前关卡换
+    this.showcase = box('showcase', root, 360, 460);
+    at(this.showcase, 0, midY + 10 * k);
+    this.showcase.setScale(ks, ks, 1);
     // 入口：左列是「每天来点一下」的活动，右列是常驻的系统；从顶栏下面往下排
     const left: EntryDef[] = [
       { id: 'signin', feature: 'signin', icon: 'icon/entry_signin', name: 'H_FEAT_SIGNIN', open: () => signInPopup(() => ui.refresh()) },
@@ -451,10 +461,57 @@ export class HomePage extends Page {
     spawn();
   }
 
+  /** 展示区：第 lvl 关的拼豆画（缩小的）摆在底板上，下面是小火车和两个小人 */
+  private async showPicture(lvl: number): Promise<void> {
+    if (this.showcaseLevel === lvl) return;
+    this.showcaseLevel = lvl;
+    const { config } = App;
+    let lv;
+    try {
+      lv = await config.loadLevel(Meta.levelFile(lvl, config.levelCount), 0);
+    } catch {
+      return;
+    }
+    if (this.showcaseLevel !== lvl || !this.showcase.isValid) return;
+    const root = this.showcase;
+    root.destroyAllChildren();
+    // 底板：米白色的拼豆板
+    const plateN = slice(root, 'kit/round_white', 330, 330, 'plate');
+    at(plateN, 0, 60);
+    (plateN.getChildByName('skin')?.getComponent(Sprite) as Sprite).color = new Color(255, 248, 228, 255);
+    const holder = box('pic', root, 280, 280);
+    at(holder, 0, 60);
+    const board = new Board(holder, 280, 280, lv);
+    board.build(GameState.fromLevel(lv), false);
+    fx.bob(holder, 5, 3);
+    // 小火车：一节车厢 + 车头，停在画下面；两个小人站在旁边
+    const y = -150;
+    for (let x = -150; x <= 150; x += 60) at(img(root, 'kit/track', 60, 18, 'track'), x, y + 3);
+    const wagon = box('wagon', root, 96, 72);
+    at(wagon, -62, y + 36);
+    img(wagon, 'kit/wagon_back', 96, 72, 'back');
+    lv.palette.slice(0, 4).forEach((c, i) => {
+      const cube = img(wagon, 'kit/bead', 20, 25, 'cube');
+      (cube.getComponent(Sprite) as Sprite).color = hex(c);
+      at(cube, (i - 1.5) * 21, 2);
+    });
+    img(wagon, 'kit/wagon_front', 96, 72, 'front');
+    at(img(root, 'kit/loco', 128, 92, 'loco'), 52, y + 45);
+    lv.palette.slice(0, 2).forEach((c, i) => {
+      const w = box('worker', root, 34, 41);
+      at(w, i === 0 ? -148 : 148, y + 26);
+      (img(w, 'kit/worker_body', 34, 41, 'body').getComponent(Sprite) as Sprite).color = hex(c);
+      img(w, 'kit/worker_top', 34, 41, 'top');
+      fx.bob(w, 4, 0.9, i * 0.4);
+    });
+    fx.popIn(root, 0, 0.3, root.scale.x);
+  }
+
   override refresh(): void {
     const eco = App.config.eco;
     const lvl = App.save.data.level;
     this.levelLabel.string = tr('UI_LEVEL', lvl);
+    void this.showPicture(lvl);
     // 难关、超难关：开始键右上角压一块同色小牌子（火苗「困难」/ 闪电「超难」，docs/09）
     const kind = levelKind(lvl);
     this.start.setColor('green');

@@ -9,5 +9,10 @@
   "raw:<批次>/c01.png",
   120,
   "png"
+ ],
+ "ui/bg/home": [
+  "raw:home/home.png",
+  750,
+  "jpg"
  ]
 }

@@ -35,7 +35,7 @@ export class Train {
 
   /**
    * layer：铁轨和火车放在这一层；y：车轮底下那条线；total：这一关一共多少颗豆；
-   * speed：现在的倍速（动画时长除以它）；onDepart：一列开走时调
+   * speed：现在的倍速（动画时长除以它）
    */
   constructor(
     private layer: Node,
@@ -49,7 +49,9 @@ export class Train {
     start: number,
     private moveSec: number,
     private speed: () => number,
-    private onDepart: (last: boolean) => void,
+    /** 火车动了：'in' 进站、'out' 开走（last = 最后一列）；onDrop：放进去一颗 */
+    private onMove: (kind: 'in' | 'out', last: boolean) => void,
+    private onDrop: () => void,
   ) {
     this.cap = wagonCount * perWagon;
     this.reserved = start;
@@ -89,6 +91,7 @@ export class Train {
 
   private arrive(): void {
     this.state = 'in';
+    this.onMove('in', false);
     at(this.node, -this.width / 2 - 320, this.y);
     tween(this.node)
       .to(this.moveSec / this.speed(), { position: new Vec3(this.homeX(), this.y, 0) }, { easing: 'quadOut' })
@@ -102,7 +105,7 @@ export class Train {
   private depart(): void {
     this.state = 'out';
     const last = this.put >= this.total;
-    this.onDepart(last);
+    this.onMove('out', last);
     for (let i = 0; i < 3; i++) this.puff(i * 0.12);
     tween(this.node)
       .delay(0.15 / this.speed())
@@ -159,6 +162,7 @@ export class Train {
   /** 放进去一颗：车厢里多一颗这个颜色的小方块 */
   drop(d: Drop, color: number): void {
     this.put++;
+    this.onDrop();
     const w = this.wagons[d.wagon];
     if (w && this.cur === d.train) {
       const col = d.index % COLS;

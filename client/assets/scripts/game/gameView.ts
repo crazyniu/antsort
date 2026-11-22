@@ -125,7 +125,6 @@ export class GamePage extends Page {
   private stage!: Node;
   private fly!: Node;
   private board!: Board;
-  private progress!: Capsule;
   private clockCap: Capsule | null = null;
   private clockSecond = -1;
   private clockWarn = false;
@@ -141,7 +140,6 @@ export class GamePage extends Page {
   private boardAt = new Vec3();
   /** 排活儿用的「画」：规则已经算到哪一步了，每个位置还摞着几颗（比画面上的走得快） */
   private plan: number[] = [];
-  private groupSeq = 0;
   /** 每个方块现在有几个小人在去搬的路上 */
   private out = new Map<CarView, number>();
   private pendingWin = false;
@@ -150,7 +148,8 @@ export class GamePage extends Page {
   private lastDropSfx = 0;
   /** 画面上已经搬走了几颗（顶栏的进度） */
   private shownCarried = 0;
-  private speedLabel: Label | null = null;
+  /** 倍速键的两个样子：[没开（蓝）, 开着（绿）] */
+  private speedKeys: Node[] = [];
   private skillNodes = new Map<string, { node: Node; icon: Node; count: Label; lock: Node; plus: Node; name: Node; badge: Node }>();
   private comboRow!: Node;
   private comboBadge!: Node;
@@ -301,7 +300,6 @@ export class GamePage extends Page {
     this.out.clear();
     this.pendingWin = false;
     this.pendingLose = false;
-    this.groupSeq = 0;
     this.plan = this.s.cols.map((c) => c.length);
     this.shownCarried = this.total - this.s.beads;
     this.picking = null;
@@ -316,25 +314,20 @@ export class GamePage extends Page {
     // 背景：整屏一片草地（docs/01 第 3 节的场景，一整个俯视的室外场景，不分块）
     tint(this.bg, Screen.W, Screen.H + 40, GRASS, 'grass');
 
-    // ---- 顶栏：微信小游戏（有胶囊）挪到胶囊那一行，设置键在最左；App 设置键在最右。关卡号居中，限时关中间换成倒计时
+    // ---- 顶栏：设置键在左上角，倍速键在右上角（微信小游戏右上角是胶囊，倍速键挨着胶囊左边），关卡号居中，限时关中间换成倒计时。
+    // 不放进度条：画搬了多少一眼看得到
     const hudY = Screen.cap ? Screen.headY : Screen.top - (Screen.notchTop > 0 ? 33 + 8 : 52);
     const levelName = this.arg.daily ? tr('UI_TAB_DAILY') : tr('UI_LEVEL', this.arg.level);
-    const rightEdge = Screen.cap ? Screen.headRight : Screen.W / 2 - 24 - 74 - 12;
-    let progressRight = -Screen.W / 2;
+    const keyS = Screen.cap ? 76 : 74;
+    const h = Screen.cap ? Screen.headH : 66;
+    const gearX = -Screen.W / 2 + 24 + keyS / 2;
+    at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', keyS, () => Flow.pause(this)), gearX, hudY);
+    const speedX = (Screen.cap ? Screen.headRight : Screen.W / 2 - 24) - keyS / 2;
+    this.buildSpeedKey(speedX, hudY, keyS);
+    const rightEdge = speedX - keyS / 2 - 12;
+    const progressRight = gearX + keyS / 2;
     const midX = (w: number): number => Math.min(rightEdge - w / 2, Math.max(0, progressRight + 12 + w / 2));
     const timed = this.s.clock !== Infinity;
-    const h = Screen.cap ? Screen.headH : 66;
-    let x0 = -Screen.W / 2 + 24;
-    if (Screen.cap) {
-      const gearW = 76;
-      at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', gearW, () => Flow.pause(this)), x0 + gearW / 2, hudY);
-      x0 += gearW + 10;
-    }
-    // 进度：搬走了百分之几（宽度按最长的写法定，整关不变）
-    this.progress = capsule(this.stage, Math.round((196 * h) / 66), h, 'icon/star', '', Math.round((34 * h) / 66), 'skin/f_hud', '100%');
-    const realW = (this.progress.node.getComponent(UITransform) as UITransform).width;
-    at(this.progress.node, x0 + realW / 2, hudY);
-    progressRight = x0 + realW;
     this.levelTitle(levelName, hudY, midX, timed);
     this.clockCap = null;
     this.clockSecond = -1;
@@ -345,7 +338,6 @@ export class GamePage extends Page {
       const cw = (this.clockCap.node.getComponent(UITransform) as UITransform).width;
       at(this.clockCap.node, midX(cw), hudY);
     }
-    if (!Screen.cap) at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', 74, () => Flow.pause(this)), Screen.W / 2 - 24 - 37, hudY);
 
     // ---- 技能栏：贴着底部安全区。没解锁的不显示（图标也不露），解锁那一关才第一次出现
     const skillY = Screen.bottom + (Screen.safeBottom > 0 ? 10 : 26) + SKILL_S / 2;
@@ -486,21 +478,28 @@ export class GamePage extends Page {
         this.station.bump(job.car, 0.035);
       },
     );
-    // ---- 倍速开关：排队区沙地右边的草地上
-    const sp = slice(this.stage, 'kit/capsule', 84, 50, 'speed');
-    at(sp, Screen.W / 2 - 20 - 42, trackTop - 20);
-    this.speedLabel = text(sp, '', 28);
-    onTap(sp, () => {
-      fast = !fast;
-      this.refreshSpeed();
-    });
-    this.refreshSpeed();
     this.refreshHud();
     this.refreshSkills();
   }
 
+  /** 倍速键：和设置键一样的方键，上面写 ×1 / ×2；开着倍速时是绿的 */
+  private buildSpeedKey(x: number, y: number, s: number): void {
+    this.speedKeys = (['blue', 'green'] as const).map((color) => {
+      const n = img(this.stage, `skin/f_key_${color}`, s, s, 'speed');
+      at(n, x, y);
+      const l = text(n, color === 'green' ? `×${App.config.ui.dig.speed}` : '×1', 30, { color: COLOR.white });
+      at(l.node, 0, s * 0.055);
+      onTap(n, () => {
+        fast = !fast;
+        this.refreshSpeed();
+      }, { press: 0.92 });
+      return n;
+    });
+    this.refreshSpeed();
+  }
+
   private refreshSpeed(): void {
-    if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
+    this.speedKeys.forEach((n, i) => (n.active = (i === 1) === fast));
   }
 
   /** 草地上撒小摆设（草丛、小花、石子，角上放灌木）：那圈路里面画的四周、排队区沙地两边。位置按关卡号定，同一关每次都一样 */
@@ -514,8 +513,7 @@ export class GamePage extends Page {
     const zones: [number, number, number, number, number][] = [
       [f.l + in0, f.r - in0, f.b + in0, f.t - in0, 14],
       [-Screen.W / 2 + 20, -half, bottom, trackTop - 4, 9],
-      // 右边上面是倍速开关，让开
-      [half, Screen.W / 2 - 20, bottom, trackTop - 64, 9],
+      [half, Screen.W / 2 - 20, bottom, trackTop - 4, 9],
     ];
     // 画占着的地方不放（留一圈空）；那圈路的四个圆角里面也不放（路往里拐了）
     const px = this.board.width / 2 + 16;
@@ -664,7 +662,6 @@ export class GamePage extends Page {
 
   /** 进度、装车位告急（只剩 warnFree 个空位变红）、该用道具时技能键发光 + 小手 */
   refreshHud(): void {
-    this.progress.set(`${this.total > 0 ? Math.floor((this.shownCarried * 100) / this.total) : 0}%`);
     const cfg = App.config.ui.station;
     const free = this.s.freeSlots();
     const playing = this.s.status === Status.PLAYING;
@@ -770,8 +767,7 @@ export class GamePage extends Page {
     const crew = this.crew;
     if (!crew) return;
     let round = -1;
-    let group = 0;
-    let paths: ((p: number) => Vec3[]) | null = null;
+    let paths: ((p: number) => { pts: Vec3[]; need: number[] }) | null = null;
     let taken: number[] = [];
     const flush = (): void => {
       for (const p of taken) this.plan[p] = Math.max(0, this.plan[p] - 1);
@@ -789,13 +785,13 @@ export class GamePage extends Page {
         if (e.round !== round || !paths) {
           flush();
           round = e.round;
-          group = ++this.groupSeq;
           paths = this.pathFinder();
         }
         const car = this.slotView[e.slot];
         if (!car) continue;
         for (const p of e.cells) {
-          crew.add({ car, cell: p, color: e.c, group, inside: paths(p) });
+          const way = paths(p);
+          crew.add({ car, cell: p, color: e.c, inside: way.pts, need: way.need });
           taken.push(p);
         }
       } else if (e.type === 'depart') {
@@ -821,9 +817,9 @@ export class GamePage extends Page {
 
   /**
    * 给这一批要搬的豆找路：从画外面那一圈，穿过已经空了的格子，走到豆旁边。
-   * 返回的函数：第 p 个位置的豆 → 一串点（第 0 个在那圈路上，最后一个在豆旁边）
+   * 返回的函数：第 p 个位置的豆 → pts 一串点（第 0 个在那圈路上，最后一个在豆旁边）、need 路上经过的格子（这些格子的豆要先被搬走，小人才走得进去）
    */
-  private pathFinder(): (p: number) => Vec3[] {
+  private pathFinder(): (p: number) => { pts: Vec3[]; need: number[] } {
     const w = this.lv.w;
     const h = this.lv.h;
     const W2 = w + 2;
@@ -867,7 +863,7 @@ export class GamePage extends Page {
       if (gy === 0) return new Vec3(c.x, f.t, 0);
       return new Vec3(c.x, f.b, 0);
     };
-    return (p: number): Vec3[] => {
+    return (p: number): { pts: Vec3[]; need: number[] } => {
       const x = p % w;
       const y = (p - x) / w;
       const bead = this.cellAt(x, y);
@@ -881,7 +877,7 @@ export class GamePage extends Page {
         const d = [x, w - 1 - x, y, h - 1 - y];
         const k = d.indexOf(Math.min(...d));
         const edge = k === 0 ? onRing(0, y + 1) : k === 1 ? onRing(W2 - 1, y + 1) : k === 2 ? onRing(x + 1, 0) : onRing(x + 1, H2 - 1);
-        return [edge, bead];
+        return { pts: [edge, bead], need: [] };
       }
       const cells: number[] = [];
       for (let q = best; q >= 0; q = from[q]) cells.push(q);
@@ -889,14 +885,17 @@ export class GamePage extends Page {
       const border = cells[cells.length - 1];
       const bx = border % W2;
       const pts: Vec3[] = [onRing(bx, (border - bx) / W2)];
+      const need: number[] = [];
       for (let i = cells.length - 2; i >= 0; i--) {
         const gx = cells[i] % W2;
-        pts.push(this.cellAt(gx - 1, (cells[i] - gx) / W2 - 1));
+        const gy = (cells[i] - gx) / W2;
+        pts.push(this.cellAt(gx - 1, gy - 1));
+        need.push((gy - 1) * w + (gx - 1));
       }
       const last = pts[pts.length - 1];
       // 停在豆的边上，不踩上去
       pts.push(cells.length === 1 ? new Vec3(bead.x + (last.x - bead.x) * 0.01, bead.y + (last.y - bead.y) * 0.01, 0) : new Vec3(last.x + (bead.x - last.x) * 0.45, last.y + (bead.y - last.y) * 0.45, 0));
-      return pts;
+      return { pts, need };
     };
   }
 

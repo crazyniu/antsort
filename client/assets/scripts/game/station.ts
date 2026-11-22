@@ -18,7 +18,7 @@ const BOAT_K = 396 / 292;
 /** 船图的中心比小河的中线高多少（木桩刚好伸到岸上，船身在河中间） */
 const BOAT_UP = 6;
 /** 方块坐在船舱里：宽是船宽的多少；方块的底在船图从上往下多少的地方（比近侧船帮的上沿低一点，被船帮挡住） */
-const SEAT_W = 0.68;
+const SEAT_W = 0.76;
 const SEAT_B = 0.83;
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */
 const QUEUE_K = 1;
@@ -30,6 +30,8 @@ const BUMP_TAG = 9301;
 const DIM = 0.9;
 /** 「＋」那条船里坐的蓝方块 */
 const PLUS_BLUE = new Color(84, 160, 255, 255);
+/** 很浅的方块上数字的颜色 */
+const PALE_INK = new Color(96, 78, 70, 255);
 /** 告急时空船泛的红 */
 const WARN_RED = new Color(255, 150, 136, 255);
 
@@ -268,7 +270,12 @@ export class Station {
     const body = img(node, 'kit/block_body', CAR_W, CAR_H, 'body');
     // 面上的一片柔光（不染色）
     img(node, 'kit/block_top', CAR_W, CAR_H, 'gloss');
-    const label = text(null, String(left), 50, { color: COLOR.white, outline: this.inkOf(c), outlineWidth: 4 });
+    // 白色、米色这些很浅的方块：数字用深色，不描边（白字看不清）
+    const base = this.colors[c] ?? Color.WHITE;
+    const pale = base.r * 0.3 + base.g * 0.59 + base.b * 0.11 > 222;
+    const label = pale
+      ? text(null, String(left), 50, { color: PALE_INK, outline: null, shadow: false })
+      : text(null, String(left), 50, { color: COLOR.white, outline: this.inkOf(c), outlineWidth: 4 });
     node.addChild(label.node);
     at(label.node, 0, 8);
     const wait = box('wait', node, 34, 34);

@@ -1,6 +1,7 @@
 // 小人（docs/01 第 3 节）：从船上的方块里「跳」上岸（一道弧线）→ 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
 // → 绕到画上面、走到车厢边放进火车 → 空着手沿铁轨走出画面消失。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
-// 出发的先后要守住一条：后一轮才露出来的豆，不能比前一轮的豆先被搬走（不然看着像是从里面掏的）。
+// 出发的先后要守住一条：一颗豆要等它面前那条路上的豆都被搬走了才能去搬（不然看着像是从里面掏的）。只卡这一条，
+// 不按「一队搬完下一队才动」排：几支小队只要各自的豆露出来了就同时干活，画面才热闹。
 // 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、双手伸在身前抱东西一套（kit/wk_*，tools/art/sprites.py 切的）。
 // 抱着的豆（kit/cube）画在「身前」：往两边走在手那一侧，往下走在胸前（盖住身子），往上走在头顶后面（俯视的画面里，身前就是画面上方，被头挡住一半）。
 import { Color, Node, Sprite, SpriteFrame, Vec3 } from 'cc';
@@ -22,10 +23,10 @@ export interface Job {
   /** 画上的哪个位置 */
   cell: number;
   color: number;
-  /** 第几批：同一次点击里的同一轮是一批，批号越小越早 */
-  group: number;
   /** 从画四周的路上的进入点，到那颗豆旁边（特效层的坐标）；第 0 个点在路上 */
   inside: Vec3[];
+  /** 走进去要经过的格子：这些格子的豆得先被搬走 */
+  need: number[];
 }
 
 /** 场地的几何（特效层的坐标） */
@@ -79,10 +80,13 @@ export class Crew {
   private pool: Walker[] = [];
   private queues = new Map<CarView, Job[]>();
   private nextAt = new Map<CarView, number>();
-  private groups = new Map<number, { total: number; sent: number; doneAt: number }>();
-  private order: number[] = [];
-  /** 前面各批的豆最晚什么时候被搬走 */
-  private prevDone = 0;
+  /** 每一格：一共排进来几颗、已经派出去几颗、派出去的小人最晚什么时候到（到了才算搬走） */
+  private cellAdded = new Map<number, number>();
+  private cellSent = new Map<number, number>();
+  private cellPickAt = new Map<number, number>();
+  /** 每颗豆在它那一格是第几颗（摞着的要按顺序搬）、算好的出发路线 */
+  private rank = new Map<Job, number>();
+  private routes = new Map<Job, Vec3[]>();
   /** 小人的时间（秒，按倍速走） */
   now = 0;
   /** 每个姿势的 4 帧（body 染色、top 不染）和显示宽度 */
@@ -112,28 +116,26 @@ export class Crew {
     }
   }
 
-  /** 排进一颗要搬的豆（按批号从小到大排进来） */
+  /** 排进一颗要搬的豆（按规则算出来的先后排进来） */
   add(job: Job): void {
     let q = this.queues.get(job.car);
     if (!q) this.queues.set(job.car, (q = []));
     q.push(job);
-    let g = this.groups.get(job.group);
-    if (!g) {
-      this.groups.set(job.group, (g = { total: 0, sent: 0, doneAt: 0 }));
-      this.order.push(job.group);
-    }
-    g.total++;
+    const n = this.cellAdded.get(job.cell) ?? 0;
+    this.rank.set(job, n);
+    this.cellAdded.set(job.cell, n + 1);
   }
 
   /** 还有豆没被抱起来（排着队的、在路上的） */
   get busy(): boolean {
-    if (this.order.length > 0) return true;
+    for (const q of this.queues.values()) if (q.length > 0) return true;
     return this.walkers.some((w) => w.phase === 0);
   }
 
   /** 场上一个小人都没有了 */
   get empty(): boolean {
-    return this.order.length === 0 && this.walkers.length === 0;
+    for (const q of this.queues.values()) if (q.length > 0) return false;
+    return this.walkers.length === 0;
   }
 
   /** 这个方块还有没出发的小人吗 */
@@ -261,6 +263,8 @@ export class Crew {
     this.now += step;
     this.dispatch();
     const v = this.cfg.walk * step;
+    /** 放完豆空着手走出去的走快一点，铁轨边不堆人 */
+    const vOut = v * 1.6;
     for (let i = this.walkers.length - 1; i >= 0; i--) {
       const w = this.walkers[i];
       if (w.phase === 2) {
@@ -286,7 +290,7 @@ export class Crew {
         this.draw(w, step);
         continue;
       }
-      this.move(w, v);
+      this.move(w, w.phase === 3 ? vOut : v);
       if (w.phase === 3) {
         if (w.seg >= w.pts.length - 1) this.free(i);
         else this.draw(w, step);
@@ -370,33 +374,45 @@ export class Crew {
     else at(w.cubeB, x, y + H * 0.8);
   }
 
-  /** 该出发的出发：每个方块隔 gap 秒放一个；后一批的要等前一批都出发了，而且不能比前一批先到 */
+  /** 这一格还有排着队没派出去的豆吗 */
+  private waitingOn(cell: number): boolean {
+    return (this.cellSent.get(cell) ?? 0) < (this.cellAdded.get(cell) ?? 0);
+  }
+
+  /** 这颗豆现在能派人去搬吗：路上的格子都（将在它到之前）空出来了，同一格摞在它上面的也都派出去了。能就返回路线 */
+  private ready(job: Job): Vec3[] | null {
+    if ((this.cellSent.get(job.cell) ?? 0) < (this.rank.get(job) ?? 0)) return null;
+    for (const c of job.need) if (this.waitingOn(c)) return null;
+    let pts = this.routes.get(job);
+    if (!pts) this.routes.set(job, (pts = this.routeOut(job)));
+    const arrive = this.now + Crew.len(pts) / this.cfg.walk;
+    if ((this.cellPickAt.get(job.cell) ?? 0) > arrive - 0.02) return null;
+    for (const c of job.need) if ((this.cellPickAt.get(c) ?? 0) > arrive - 0.02) return null;
+    return pts;
+  }
+
+  /** 该出发的出发：每个方块隔 gap 秒放一个；队里靠前的豆路还没空出来，就先派后面路已经空了的 */
   private dispatch(): void {
-    while (this.order.length > 0) {
-      const g = this.groups.get(this.order[0]);
-      if (g && g.sent < g.total) break;
-      if (g) this.prevDone = Math.max(this.prevDone, g.doneAt);
-      this.groups.delete(this.order[0]);
-      this.order.shift();
-    }
-    if (this.order.length === 0) return;
-    const head = this.order[0];
-    const g = this.groups.get(head);
-    if (!g) return;
     for (const [car, q] of this.queues) {
       if (q.length === 0) {
         this.queues.delete(car);
         continue;
       }
       let next = Math.max(this.nextAt.get(car) ?? 0, car.readyAt);
-      while (q.length > 0 && q[0].group === head && next <= this.now && this.walkers.length < this.cfg.maxWalkers) {
-        const job = q[0];
-        const pts = this.routeOut(job);
-        const arrive = this.now + Crew.len(pts) / this.cfg.walk;
-        if (arrive < this.prevDone + 0.02) break;
-        q.shift();
-        g.sent++;
-        g.doneAt = Math.max(g.doneAt, arrive);
+      while (q.length > 0 && next <= this.now && this.walkers.length < this.cfg.maxWalkers) {
+        let at0 = -1;
+        let pts: Vec3[] | null = null;
+        const n = Math.min(q.length, 32);
+        for (let i = 0; i < n && !pts; i++) {
+          pts = this.ready(q[i]);
+          if (pts) at0 = i;
+        }
+        if (!pts) break;
+        const job = q.splice(at0, 1)[0];
+        this.rank.delete(job);
+        this.routes.delete(job);
+        this.cellSent.set(job.cell, (this.cellSent.get(job.cell) ?? 0) + 1);
+        this.cellPickAt.set(job.cell, Math.max(this.cellPickAt.get(job.cell) ?? 0, this.now + Crew.len(pts) / this.cfg.walk));
         this.spawn(job, pts);
         this.onSend(job);
         // 落后太多就不补了：一帧最多连着放几个

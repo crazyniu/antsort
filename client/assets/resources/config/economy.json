@@ -7,12 +7,18 @@
  "toolStart": {
   "slot": 0,
   "shunt": 0,
-  "magnet": 0
+  "magnet": 0,
+  "shovel": 0
  },
  "toolPrice": {
   "slot": 120,
   "shunt": 100,
-  "magnet": 160
+  "magnet": 160,
+  "shovel": 140
+ },
+ "shovel": {
+  "dig": 9,
+  "perLevel": 2
  },
  "toolMaxFree": 2,
  "toolMaxFreeById": {},
@@ -110,7 +116,8 @@
   "order": [
    "slot",
    "shunt",
-   "magnet"
+   "magnet",
+   "shovel"
   ],
   "grantOnUnlock": 1,
   "freePerDay": 1,
@@ -319,6 +326,7 @@
   "skill_slot": 4,
   "skill_shunt": 8,
   "skill_magnet": 16,
+  "skill_shovel": 24,
   "levelSelect": 5,
   "album": 7,
   "wheel": 10,

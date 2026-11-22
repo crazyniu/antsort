@@ -43,10 +43,12 @@
   "rescueSkills": [
    "slot",
    "shunt",
-   "magnet"
+   "magnet",
+   "shovel"
   ],
   "nudgeHand": [
    "slot",
+   "shovel",
    "magnet",
    "shunt"
   ]

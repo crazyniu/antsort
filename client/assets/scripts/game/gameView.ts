@@ -10,6 +10,7 @@ import type { DigLevel } from '../core/dig/level';
 import * as Rules from '../core/dig/rules';
 import { GameState, Status } from '../core/dig/rules';
 import type { GameEvent } from '../core/dig/rules';
+import type { Drop } from './train';
 import { Rng } from '../core/rng/rng';
 import { App } from '../services/app';
 import { buzz, sfx } from '../services/audio';
@@ -150,6 +151,8 @@ export class GamePage extends Page {
   private shownCarried = 0;
   /** 右上角的加速键 */
   private speedKey: Btn | null = null;
+  /** 铲子铲起来、正飞向火车或在铁轨边等车停稳的豆 */
+  private flyers: { d: Drop; c: number; node: Node; arrived: boolean }[] = [];
   private skillNodes = new Map<string, { node: Node; icon: Node; count: Label; lock: Node; plus: Node; name: Node; badge: Node }>();
   private comboRow!: Node;
   private comboBadge!: Node;
@@ -304,6 +307,7 @@ export class GamePage extends Page {
     this.shownCarried = this.total - this.s.beads;
     this.picking = null;
     this.skillNodes.clear();
+    this.flyers = [];
     this.nudged.clear();
     this.pointedNode = null;
     this.hintNode = null;
@@ -803,6 +807,8 @@ export class GamePage extends Page {
         if (!car) continue;
         car.done = true;
         if (car.left <= 0) this.station.leave(car);
+      } else if (e.type === 'shovel') {
+        this.playShovel(e.cells, e.c, e.cuts);
       } else if (e.type === 'slot') {
         while (this.slotView.length < e.count) this.slotView.push(null);
         this.station.setSlots(e.count);
@@ -902,6 +908,63 @@ export class GamePage extends Page {
     };
   }
 
+  /**
+   * 铲子（docs/01 第 3 节）：铲子从技能键飞到那一串的最外头，一下一下往里铲，铲起来的豆弹起、飞进火车；
+   * 扣了数的方块数字跳一下，扣到 0 的弹一下消失（场上的小队由后面的 depart 事件离场）
+   */
+  private playShovel(cells: number[], colors: number[], cuts: Rules.ShovelCut[]): void {
+    for (const cut of cuts) {
+      if (cut.track !== undefined && cut.index !== undefined) this.station.cut(cut.track, cut.index, cut.k, cut.gone, 0.3);
+      else if (cut.slot !== undefined) {
+        const car = this.slotView[cut.slot];
+        if (car && car.node.isValid) {
+          this.station.setLeft(car, car.left - cut.k);
+          this.station.bump(car, 0.12);
+        }
+      }
+    }
+    for (const p of cells) this.plan[p] = Math.max(0, this.plan[p] - 1);
+    const train = this.train;
+    if (!train || cells.length === 0) return;
+    const STEP = 0.12;
+    const from = this.skillNodes.get('shovel')?.node.position ?? new Vec3(0, -Screen.H / 2, 0);
+    const tool = img(this.fly, 'icon/skill_shovel', 96, 96, 'shovel');
+    at(tool, from.x, from.y);
+    const first = this.cellAt(cells[0] % this.lv.w, Math.floor(cells[0] / this.lv.w));
+    let t = tween(tool).to(0.3, { position: new Vec3(first.x + 30, first.y + 40, 0) }, { easing: 'quadOut' });
+    cells.forEach((p, i) => {
+      const at0 = this.cellAt(p % this.lv.w, Math.floor(p / this.lv.w));
+      t = t
+        .to(STEP * 0.5, { position: new Vec3(at0.x + 26, at0.y + 30, 0), angle: -25 })
+        .call(() => this.shovelOne(p, colors[i], at0))
+        .to(STEP * 0.5, { angle: 0 });
+    });
+    t.to(0.2, { scale: new Vec3(0, 0, 1) }).call(() => tool.destroy()).start();
+    sfx('shovel');
+  }
+
+  /** 铲起一颗：豆从画上消失，一颗同色的小方块弹起来飞到它要放的那节车厢边上，车停稳了再放进去 */
+  private shovelOne(p: number, c: number, pos: Vec3): void {
+    const train = this.train;
+    if (!train) return;
+    this.board.dig(p);
+    this.shownCarried++;
+    sfx('bo', 0, 0.45);
+    const d = train.reserve(c);
+    const node = img(this.fly, 'kit/bead', 26, 32, 'flyBead');
+    (node.getComponent(Sprite) as Sprite).color = this.board.colors[c];
+    at(node, pos.x, pos.y);
+    const f = { d, c, node, arrived: false };
+    this.flyers.push(f);
+    const top = new Vec3((pos.x + d.x) / 2, Math.max(pos.y, d.y) + 120, 0);
+    tween(node)
+      .to(0.25, { position: top }, { easing: 'quadOut' })
+      .to(0.3, { position: new Vec3(d.x, d.y + 30, 0) }, { easing: 'quadIn' })
+      .call(() => (f.arrived = true))
+      .start();
+    this.refreshHud();
+  }
+
   /** 一个小人抱起了一颗豆：豆从画上消失，方块的数字减 1，搬完的方块离场 */
   private picked(job: Job): void {
     const car = job.car;
@@ -931,12 +994,19 @@ export class GamePage extends Page {
     if (!crew || !this.s || !this.stage.isValid || !this.stage.activeInHierarchy) return;
     if (this.paused || ui.currentName !== 'game' || popupCount() > 0) return;
     crew.update(Math.min(dt, 0.05), this.speed);
+    for (let i = this.flyers.length - 1; i >= 0; i--) {
+      const f = this.flyers[i];
+      if (!f.arrived || !this.train?.ready(f.d.train)) continue;
+      this.train.drop(f.d, f.c);
+      f.node.destroy();
+      this.flyers.splice(i, 1);
+    }
     for (const car of this.station.places) {
       if (!car) continue;
       const idle = car.left > 0 && crew.now > car.readyAt + 0.2 && !crew.pending(car) && (this.out.get(car) ?? 0) === 0;
       this.station.setWait(car, idle);
     }
-    if (this.pendingWin && crew.empty && this.train?.finished) {
+    if (this.pendingWin && crew.empty && this.flyers.length === 0 && this.train?.finished) {
       this.pendingWin = false;
       this.celebrate();
       fx.delay(this.fly, 1.2, () => Flow.win(this));

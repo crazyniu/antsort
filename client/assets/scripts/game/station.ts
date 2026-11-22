@@ -350,6 +350,13 @@ export class Station {
       .to(dur * 0.5, { position: to, scale: new Vec3(k, k, 1) }, { easing: 'quadIn' })
       .call(() => this.bump(car))
       .start();
+    this.relayout(t, dur);
+    if (this.warn) this.setWarn(true);
+    return car;
+  }
+
+  /** 第 t 列（从前往后）摆好：前 TRACK_ROWS 个露出来，最前面的亮 */
+  private relayout(t: number, dur: number): void {
     this.tracks[t].forEach((c, j) => {
       const was = c.node.active;
       c.node.active = j < TRACK_ROWS;
@@ -364,8 +371,28 @@ export class Station {
       tween(c.node).to(dur, { position: p }, { easing: 'quadOut' }).start();
     });
     this.refreshMore();
-    if (this.warn) this.setWarn(true);
-    return car;
+  }
+
+  /** 技能「铲子」从排队区第 t 列第 i 个方块上扣了 k：数字跳一下；扣到 0 弹一下消失，后面的往前补 */
+  cut(t: number, i: number, k: number, gone: boolean, dur: number): void {
+    const car = this.tracks[t]?.[i];
+    if (!car) return;
+    car.n -= k;
+    this.setLeft(car, car.left - k);
+    if (!gone) {
+      if (car.node.active) this.bump(car, 0.12);
+      return;
+    }
+    this.tracks[t].splice(i, 1);
+    const node = car.node;
+    Tween.stopAllByTarget(node);
+    const s = node.scale.x;
+    tween(node)
+      .to(0.1, { scale: new Vec3(s * 1.18, s * 1.18, 1) }, { easing: 'quadOut' })
+      .to(0.14, { scale: new Vec3(0, 0, 1) }, { easing: 'backIn' })
+      .call(() => node.destroy())
+      .start();
+    this.relayout(t, dur);
   }
 
   private refreshMore(): void {

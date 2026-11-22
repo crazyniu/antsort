@@ -95,6 +95,7 @@ H_RETRY,重试,Retry,重試,もう一度,다시 하기,Nochmal,Rejouer,Reintenta
 H_REVIVE_AD,复活,Revive,復活,復活,부활,Weiter,Reprendre,Revivir,Reviver,Riprova,Продолжить,Canlan
 H_REVIVE_LINE,复活后接着玩,Revive and keep going,復活後接著玩,復活してつづけよう,부활해서 계속해요,Wiederbeleben und weiter,Reprends la partie,Revive y sigue jugando,Reviva e continue,Torna in gioco e continua,Вернись в игру,Canlan ve devam et
 H_SKILL_MAGNET,磁铁,Magnet,磁鐵,マグネット,자석,Magnet,Aimant,Imán,Ímã,Calamita,Магнит,Mıknatıs
+H_SKILL_SHOVEL,铲子,Shovel,鏟子,スコップ,삽,Schaufel,Pelle,Pala,Pá,Paletta,Лопата,Kürek
 H_SKILL_SHUNT,调队,Pick Any,調隊,えらぶ,골라 부르기,Freie Wahl,Au choix,A elegir,À escolha,A scelta,Любой блок,Seç Al
 H_SKILL_SLOT,加位,Extra Spot,加位,枠を追加,자리 추가,Extra-Platz,Place en plus,Sitio extra,Vaga extra,Posto extra,Ещё место,Ek Yer
 H_SOUND,音效,Sound,音效,効果音,효과음,Sound,Sons,Sonido,Sons,Suoni,Звуки,Ses
@@ -203,6 +204,7 @@ UI_RARITY_RARE,稀有,Rare,稀有,レア,희귀,Selten,Rare,Raro,Raro,Raro,Ре�
 UI_RARITY_UNCOMMON,精良,Uncommon,精良,アンコモン,고급,Besonders,Peu commun,Poco común,Incomum,Non comune,Необычная,Seçkin
 UI_REPLAY_NO_REWARD,今日重玩奖励已领完,No rewards left today,今日重玩獎勵已領完,今日の再挑戦ボーナスは終了,오늘 재도전 보상은 끝났어요,Heute keine Belohnung mehr,Plus de récompense aujourd’hui,Hoy ya no hay premios,Sem prêmios por hoje,Niente premi per oggi,Награды на сегодня кончились,Bugünlük ödül kalmadı
 UI_SETTINGS,设置,Settings,設定,設定,설정,Optionen,Réglages,Ajustes,Ajustes,Impostazioni,Настройки,Ayarlar
+UI_SHOVEL_EMPTY,现在没有要铲的,Nothing to dig right now,現在沒有要鏟的,今は掘るところがないよ,지금은 팔 곳이 없어요,Gerade gibt es nichts zu graben,Rien à creuser pour l’instant,Ahora no hay nada que cavar,Nada para cavar agora,Ora non c’è niente da scavare,Сейчас копать нечего,Şu an kazılacak yer yok
 UI_SHUNT_EMPTY,现在没法调队,Nothing to pick right now,現在沒辦法調隊,今はえらべないよ,지금은 고를 수 없어요,Gerade nichts zu wählen,Rien à choisir pour l’instant,Ahora no hay nada que elegir,Nada para escolher agora,Niente da scegliere ora,Сейчас выбирать нечего,Şu an seçilecek bir şey yok
 UI_SHUNT_PICK,点一个后排的方块,Tap any block in line,點一個後排的方塊,うしろのブロックをタップ,뒤에 있는 블록을 누르세요,Tippe einen Block weiter hinten an,Touche un bloc dans la file,Toca un bloque de la fila,Toque em um bloco da fila,Tocca un blocco in coda,Нажми на блок в очереди,Sıradaki bir bloğa dokun
 UI_SIGNIN,签到,Daily Gift,簽到,ログボ,출석,Tagesbonus,Cadeau du jour,Regalo diario,Presente diário,Regalo del giorno,Подарок дня,Günlük hediye

@@ -207,6 +207,11 @@ export function hasEffect(g: GamePage, id: string): string | null {
   if (id === 'slot') return g.s.slotAdded ? 'UI_SLOT_EMPTY' : null;
   if (id === 'shunt') return Rules.canShunt(g.s) ? null : 'UI_SHUNT_EMPTY';
   if (id === 'magnet') return Rules.canMagnet(g.s) ? null : 'UI_MAGNET_EMPTY';
+  if (id === 'shovel') {
+    const sh = App.config.eco.shovel;
+    if (g.s.shovels >= sh.perLevel) return 'UI_TOOL_LIMIT';
+    return Rules.canShovel(g.s, sh.dig, sh.perLevel) ? null : 'UI_SHOVEL_EMPTY';
+  }
   return null;
 }
 
@@ -265,6 +270,7 @@ export function useSkill(g: GamePage, id: string): void {
   if (!pay()) return;
   if (id === 'slot') g.act(() => Rules.useSlot(g.s));
   else if (id === 'magnet') g.act(() => Rules.useMagnet(g.s));
+  else if (id === 'shovel') g.act(() => Rules.useShovel(g.s, eco.shovel.dig, eco.shovel.perLevel));
 }
 
 /** 数量为 0：金币买，金币不够则看广告得 1 个（docs/01）；这一版没有广告时只有金币买，弹窗矮一截 */

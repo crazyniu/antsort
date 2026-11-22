@@ -34,10 +34,11 @@ const MAP: Record<string, string> = {
   land: 'land',
   tick: 'tick',
   swell: 'swell',
-  // 技能：加位、调队、磁铁
+  // 技能：加位、调队、磁铁、铲子
   slot: 'unlock',
   shunt: 'shuffle',
   magnet: 'magnet',
+  shovel: 'tick',
   // 方块上场、一支小队搬完、火车鸣笛、火车开动（client/tools/audio/train.py 合成的）
   enter: 'land',
   done: 'bowl_done',

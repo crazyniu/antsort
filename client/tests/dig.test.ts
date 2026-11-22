@@ -224,6 +224,64 @@ describe('技能', () => {
     assert.ok(!Rules.canMagnet(again), '用过一次了');
   });
 
+  it('铲子：给卡住的小队挖开一条路，挖掉的从同色方块上扣数，总数对得上', () => {
+    // 外圈 0 包着里圈 1，中间一颗 2；先叫 2，它被两圈围住，卡住了
+    const s = GameState.fromLevel(level([ONION], [[car(2, 1)], [car(1, 8)], [car(0, 10), car(0, 6)]], 3));
+    Rules.tap(s, 0);
+    assert.equal(s.slots[0]?.left, 1, '2 卡住了');
+    const path = Rules.shovelPath(s, 9);
+    assert.equal(path.length, 2, '挖开外圈一颗、里圈一颗就到 2 旁边');
+    assert.deepEqual(path, [22, 17], '离火车近（靠下的行）、靠中间的那条路，从外往里');
+    const ev = Rules.useShovel(s, 9, 2);
+    const sh = ev[0];
+    assert.ok(sh.type === 'shovel');
+    if (sh.type === 'shovel') {
+      assert.deepEqual(sh.c, [0, 1]);
+      assert.deepEqual(
+        sh.cuts.map((x) => [x.c, x.k, x.gone, x.track, x.index]),
+        [
+          [0, 1, false, 2, 1],
+          [1, 1, false, 1, 0],
+        ],
+        '扣排队区排得最靠后的同色方块',
+      );
+    }
+    assert.equal(s.slots[0], null, '路通了，2 搬完离场');
+    assert.equal(s.tracks[2][1].n, 5);
+    assert.equal(s.tracks[1][0].n, 7);
+    assert.equal(s.shovels, 1);
+    Rules.tap(s, 1);
+    Rules.tap(s, 2);
+    Rules.tap(s, 2);
+    assert.equal(s.status, Status.WON, '扣过数以后照样能正好搬完');
+  });
+
+  it('铲子：一次最多挖 dig 颗；扣到 0 的方块消失；排队区没有了扣场上的；每关有次数上限', () => {
+    // 7 宽：中间一颗 2 被三圈 0 围着，要挖 3 颗才到
+    const rows = ['0000000', '0000000', '0000000', '0002000', '0000000', '0000000', '0000000'];
+    const s = GameState.fromLevel(level([rows], [[car(2, 1)], [car(0, 46), car(0, 2)]], 3));
+    Rules.tap(s, 0);
+    assert.deepEqual(Rules.shovelPath(s, 2).length, 2, '挖不通也先挖最外面 2 颗');
+    const ev = Rules.useShovel(s, 2, 2);
+    const sh = ev[0];
+    if (sh.type === 'shovel') assert.deepEqual(sh.cuts.map((x) => [x.k, x.gone]), [[2, true]], '后面那块 2 被扣完、消失');
+    assert.equal(s.tracks[1].length, 1);
+    assert.equal(s.cars, 2);
+    assert.equal(s.slots[0]?.left, 1, '还没挖通');
+    // 叫上 0（46），它把露出来的都搬了；剩下的再铲
+    Rules.tap(s, 1);
+    assert.ok(!Rules.canShovel(s, 9, 1), '每关上限 1 次时用完了');
+  });
+
+  it('铲子：场上没有小队时给排队区最前排的颜色开路；没有要挖的不扣', () => {
+    const s = GameState.fromLevel(level([ONION], [[car(2, 1)], [car(1, 8)], [car(0, 16)]], 3));
+    assert.ok(Rules.canShovel(s, 9, 2));
+    const open = GameState.fromLevel(level([['000', '0.0', '000']], [[car(0, 8)]], 3));
+    assert.ok(!Rules.canShovel(open, 9, 2), '0 都在外圈，没有要挖的');
+    assert.deepEqual(Rules.useShovel(open, 9, 2), []);
+    assert.equal(open.shovels, 0);
+  });
+
   it('透视：有被盖住的豆才有东西看', () => {
     assert.ok(!GameState.fromLevel(level([ONION], [[car(0, 16), car(1, 8), car(2, 1)]])).hasHidden());
     assert.ok(GameState.fromLevel(level([['00', '00'], ['11', '11']], [[car(0, 4), car(1, 4)]])).hasHidden());

@@ -131,3 +131,17 @@ out(
    <rect x="71.5" y="20" width="29" height="22" rx="4" fill="#e6ebf3" stroke="#6d7688" stroke-width="5"/>
    <path d="M18 14 L24 22 M110 14 L104 22 M64 4 V14" stroke="#ffd21f" stroke-width="6" stroke-linecap="round"/>`,
 );
+// 铲子：一把斜着的小铲子，铲头下面几颗飞起来的豆
+out(
+  'icon/skill_shovel',
+  128,
+  128,
+  `<g transform="rotate(-35 64 64)">
+   <rect x="57" y="10" width="14" height="58" rx="6" fill="#d98b3a" stroke="#8a4b16" stroke-width="5"/>
+   <rect x="46" y="6" width="36" height="14" rx="7" fill="#f2b55a" stroke="#8a4b16" stroke-width="5"/>
+   <path d="M40 66 H88 V92 Q88 116 64 122 Q40 116 40 92 Z" fill="#c9d3e2" stroke="#55627a" stroke-width="5" stroke-linejoin="round"/>
+   <path d="M48 72 H58 V96 Q58 106 52 108" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="5" stroke-linecap="round"/></g>
+   <rect x="86" y="88" width="20" height="20" rx="5" fill="#ff7386" stroke="#9f565b" stroke-width="4"/>
+   <rect x="98" y="62" width="16" height="16" rx="4" fill="#ffe129" stroke="#9f565b" stroke-width="4"/>
+   <rect x="74" y="104" width="14" height="14" rx="4" fill="#19ceec" stroke="#9f565b" stroke-width="4"/>`,
+);

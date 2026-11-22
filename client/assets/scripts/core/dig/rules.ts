@@ -36,10 +36,25 @@ export type GameEvent =
   | { type: 'dig'; round: number; slot: number; c: number; cells: number[]; under: number[] }
   /** 装满发车，装车位空出来 */
   | { type: 'depart'; round: number; slot: number; c: number }
+  /**
+   * 技能「铲子」：按顺序挖掉 cells 这些位置最上面的豆（从外往里，c 是各自的颜色，under 是挖走后露出来的东西），直接装上火车；
+   * cuts 是按顺序从哪些方块上扣了数（track/index 是扣的那一刻在排队区的位置，slot 是场上的位子；gone = 扣到 0 消失了）
+   */
+  | { type: 'shovel'; cells: number[]; c: number[]; under: number[]; cuts: ShovelCut[] }
   /** 装车位多了一个（技能「加位」、堵死后复活） */
   | { type: 'slot'; count: number }
   | { type: 'win' }
   | { type: 'lose'; reason: LoseReason };
+
+/** 铲子从一个方块上扣的数：排队区的写 track、index，场上的写 slot */
+export interface ShovelCut {
+  c: number;
+  k: number;
+  gone: boolean;
+  track?: number;
+  index?: number;
+  slot?: number;
+}
 
 export class GameState {
   w = 0;
@@ -66,6 +81,8 @@ export class GameState {
   slotAdded = false;
   /** 这一关用过「磁铁」了（每关最多 1 次） */
   magnetUsed = false;
+  /** 这一关用了几次「铲子」 */
+  shovels = 0;
 
   static fromLevel(lv: DigLevel): GameState {
     const s = new GameState();
@@ -97,6 +114,7 @@ export class GameState {
     s.revived = this.revived;
     s.slotAdded = this.slotAdded;
     s.magnetUsed = this.magnetUsed;
+    s.shovels = this.shovels;
     return s;
   }
 
@@ -341,6 +359,172 @@ export function useMagnet(s: GameState): GameEvent[] {
   s.magnetUsed = true;
   const ev: GameEvent[] = [];
   pull(s, ev);
+  return ev;
+}
+
+/**
+ * 铲子要挖的那一串（docs/01 第 1.6 节）：从外往里的位置，不超过 dig 颗豆；没有要挖的返回 []。
+ * 1. 给哪些颜色开路：场上卡住的小队（没搬完、画上又没有露出来的自己颜色的豆）；没有卡住的就给场上所有没搬完的；场上没有小队就给排队区最前排的。
+ * 2. 这些颜色的顶豆里，挖开它要挖掉的豆最少的那颗（穿过几颗别的豆才到它旁边）；一样少的按「离火车近」（同 nearFirst），再按小队上场先后。
+ * 3. 从外往里挖掉挡在它前面的那一串，最多 dig 颗。石块挖不动，路不穿过石块
+ */
+export function shovelPath(s: GameState, dig: number): number[] {
+  if (s.status !== Status.PLAYING || dig <= 0) return [];
+  const { w, h, cols } = s;
+  const n = w * h;
+  const can = s.diggable();
+  const open = new Set<number>();
+  for (let p = 0; p < n; p++) if (can[p] && s.top(p) >= 0) open.add(s.top(p));
+  const team = s.slots.filter((x): x is Car => x !== null && x.left > 0).sort((a, b) => a.seq - b.seq);
+  let colors = team.filter((x) => !open.has(x.c)).map((x) => x.c);
+  if (colors.length === 0) colors = team.map((x) => x.c);
+  if (colors.length === 0) colors = s.tracks.filter((t) => t.length > 0).map((t) => t[0].c);
+  if (colors.length === 0) return [];
+  const rank = new Map<number, number>();
+  colors.forEach((c, i) => {
+    if (!rank.has(c)) rank.set(c, i);
+  });
+  const cmp = nearFirst(s);
+  // 挖空一个位置要挖几颗（有石块的挖不动）
+  const cost = (p: number): number => (cols[p].includes(STONE) ? Infinity : cols[p].length);
+  // D[p]：把 p 和从外面到 p 的一条路都挖空，最少挖几颗；from[p]：路上 p 前面那个位置（-1 = 外面）
+  const D = new Float64Array(n).fill(Infinity);
+  const from = new Int32Array(n).fill(-1);
+  const done = new Uint8Array(n);
+  for (let p = 0; p < n; p++) {
+    const x = p % w;
+    const y = (p - x) / w;
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) D[p] = cost(p);
+  }
+  // 格子不多（一千以内），直接每次挑最小的
+  for (;;) {
+    let u = -1;
+    for (let p = 0; p < n; p++) if (!done[p] && D[p] < Infinity && (u < 0 || D[p] < D[u])) u = p;
+    if (u < 0) break;
+    done[u] = 1;
+    const x = u % w;
+    for (const v of [x > 0 ? u - 1 : -1, x < w - 1 ? u + 1 : -1, u - w, u + w]) {
+      if (v < 0 || v >= n || done[v]) continue;
+      const d = D[u] + cost(v);
+      // 一样省的路，挑离火车近的那条
+      if (d < D[v] || (d === D[v] && from[v] >= 0 && cmp(u, from[v]) < 0)) {
+        D[v] = d;
+        from[v] = u;
+      }
+    }
+  }
+  // 每颗目标顶豆：到它旁边要挖几颗（在最外圈 = 0），走哪个邻格进来
+  let best = -1;
+  let bestCost = Infinity;
+  let bestVia = -1;
+  for (let p = 0; p < n; p++) {
+    const c = s.top(p);
+    if (c < 0 || !rank.has(c)) continue;
+    const x = p % w;
+    const y = (p - x) / w;
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) continue;
+    let via = -1;
+    let k = Infinity;
+    for (const q of [p - 1, p + 1, p - w, p + w]) {
+      if (D[q] < k || (D[q] === k && via >= 0 && cmp(q, via) < 0)) {
+        k = D[q];
+        via = q;
+      }
+    }
+    if (k === 0 || k === Infinity) continue;
+    const better =
+      best < 0 || k < bestCost || (k === bestCost && (cmp(p, best) < 0 || (cmp(p, best) === 0 && (rank.get(c) ?? 0) < (rank.get(s.top(best)) ?? 0))));
+    if (better) {
+      best = p;
+      bestCost = k;
+      bestVia = via;
+    }
+  }
+  if (best < 0) return [];
+  const path: number[] = [];
+  for (let q = bestVia; q >= 0; q = from[q]) path.push(q);
+  path.reverse();
+  // 从外往里，每个位置从上往下挖，挖够 dig 颗为止（一个位置叠着几颗就记几次）
+  const out: number[] = [];
+  for (const p of path) {
+    for (let i = 0; i < cols[p].length && out.length < dig; i++) out.push(p);
+    if (out.length >= dig) break;
+  }
+  return out;
+}
+
+/** 技能「铲子」能用吗：这一关用了不到 perLevel 次，而且有要挖的 */
+export function canShovel(s: GameState, dig: number, perLevel: number): boolean {
+  return s.status === Status.PLAYING && s.shovels < perLevel && shovelPath(s, dig).length > 0;
+}
+
+/** 从颜色 c 的方块上扣掉 k：先扣排队区排得最靠后的，扣完再扣场上后上场的 */
+function cutColor(s: GameState, c: number, k: number, cuts: ShovelCut[], ev: GameEvent[]): void {
+  while (k > 0) {
+    let track = -1;
+    let index = -1;
+    s.tracks.forEach((t, ti) => {
+      t.forEach((def, i) => {
+        if (def.c === c && (i > index || (i === index && ti > track))) {
+          track = ti;
+          index = i;
+        }
+      });
+    });
+    if (track >= 0) {
+      const def = s.tracks[track][index];
+      const take = Math.min(k, def.n);
+      def.n -= take;
+      k -= take;
+      const gone = def.n === 0;
+      if (gone) {
+        s.tracks[track].splice(index, 1);
+        s.cars--;
+      }
+      cuts.push({ c, k: take, gone, track, index });
+      continue;
+    }
+    let slot = -1;
+    s.slots.forEach((car, i) => {
+      if (car && car.c === c && car.left > 0 && (slot < 0 || car.seq > (s.slots[slot] as Car).seq)) slot = i;
+    });
+    if (slot < 0) return;
+    const car = s.slots[slot] as Car;
+    const take = Math.min(k, car.left);
+    car.left -= take;
+    k -= take;
+    const gone = car.left === 0;
+    cuts.push({ c, k: take, gone, slot });
+    if (gone) {
+      s.slots[slot] = null;
+      s.departed++;
+      ev.push({ type: 'depart', round: 0, slot, c });
+    }
+  }
+}
+
+/** 技能「铲子」（docs/01 第 1.6 节）：挖掉 shovelPath 那一串，从同色的方块上扣数，然后场上的小队接着搬 */
+export function useShovel(s: GameState, dig: number, perLevel: number): GameEvent[] {
+  if (!canShovel(s, dig, perLevel)) return [];
+  s.shovels++;
+  const cells = shovelPath(s, dig);
+  const colors: number[] = [];
+  const under: number[] = [];
+  const count = new Map<number, number>();
+  for (const p of cells) {
+    const c = s.cols[p].pop() as number;
+    colors.push(c);
+    under.push(s.top(p));
+    count.set(c, (count.get(c) ?? 0) + 1);
+  }
+  s.beads -= cells.length;
+  const cuts: ShovelCut[] = [];
+  const ev: GameEvent[] = [];
+  const shovel: GameEvent = { type: 'shovel', cells, c: colors, under, cuts };
+  ev.push(shovel);
+  for (const [c, k] of count) cutColor(s, c, k, cuts, ev);
+  settle(s, ev, 1);
+  check(s, ev);
   return ev;
 }
 

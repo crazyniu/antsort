@@ -1,7 +1,7 @@
 // 配置表的类型。数值只在 assets/resources/config/*.json 里，代码不写死（CLAUDE.md 硬性约束 5）。
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legend';
-/** 技能 id：slot 加位、shunt 调队、magnet 磁铁（economy.json 的 skills.order，docs/01 第 1.6 节） */
+/** 技能 id：slot 加位、shunt 调队、magnet 磁铁、shovel 铲子（economy.json 的 skills.order，docs/01 第 1.6 节） */
 export type SkillId = string;
 
 /** 一张收藏卡（config/cards.json）：图在 resources/card/<id>.png，名字文案 CARD_<id> */
@@ -136,6 +136,8 @@ export interface EconomyConfig {
   adCoinMultiplier: number;
   toolStart: Record<string, number>;
   toolPrice: Record<string, number>;
+  /** 技能「铲子」：一次最多挖几颗、每关最多用几次（docs/01 第 1.6 节） */
+  shovel: { dig: number; perLevel: number };
   /**
    * 全部免费的那几关（skills.freeAllUntil 以前）每关每种技能最多用几次。别的关不限次数：道具靠库存和金币买（docs/01）
    */

@@ -208,16 +208,21 @@ def props() -> None:
 RAW3 = REPO / 'art/raw/sprites_v3'
 
 
-def shine(a: np.ndarray, lo: float = 0.9) -> tuple[np.ndarray, np.ndarray]:
-    """白色的立体小件切成两张：灰度本体（局内染色）和不染色的高光（最亮的那些像素，白的、按亮度给透明度）"""
+def shine(a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """白色的立体小件切成两张：灰度本体（局内染色）和不染色的高光。
+    本体：亮度按「正面那一片」（亮度的六成分位）拉到 1，正面染出来正好是色板上的颜色，侧面、阴影按比例暗下去；
+    高光：只取最亮的那 3%（真正的反光点），白的、按亮度给透明度。高光取多了整颗豆会蒙一层白、颜色发灰"""
     rgb, alpha = a[..., :3], a[..., 3]
     v = rgb.max(-1)
+    solid = v[alpha > 0.9]
+    face = float(np.percentile(solid, 60))
+    spec = float(np.percentile(solid, 97))
     body = np.zeros_like(a)
-    body[..., 0] = body[..., 1] = body[..., 2] = np.clip(v / 0.96, 0, 1)
+    body[..., 0] = body[..., 1] = body[..., 2] = np.clip(v / face, 0, 1)
     body[..., 3] = alpha
     hi = np.zeros_like(a)
     hi[..., :3] = 1
-    hi[..., 3] = alpha * np.clip((v - lo) / (1 - lo), 0, 1) * 0.85
+    hi[..., 3] = alpha * np.clip((v - spec) / max(1e-3, 1 - spec), 0, 1) * 0.7
     return body, hi
 
 

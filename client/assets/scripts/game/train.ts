@@ -1,17 +1,29 @@
-// 火车（docs/01 第 1.2、3 节）：停在画和上场位之间的铁轨上，小人把豆放进车厢，装满一列开走、下一列开进来。
+// 火车（docs/01 第 1.2、3 节）：停在画下面的铁轨上，车头在右。小人从画那边（铁轨上沿）把豆放进车厢，装满一列开走，下一列紧跟着进站。
 // 只是装豆的地方，不影响规则：按送来了几颗自己算装到第几节、什么时候发车。
-import { Color, Node, Sprite, Vec3, tween } from 'cc';
+// 车厢是白图按装的颜色染色（一节装一种颜色）；放豆的位置按是这一节的第几颗分到左、中、右，前后错开一点，几个小人同时放不叠在一起。
+import { Color, Node, Sprite, Tween, Vec3, tween } from 'cc';
 import { at, box, img, opacity } from '../ui/kit';
 
-/** 车头、车厢显示多大（kit/loco、kit/wagon_*，client/tools/art/sprites.py 切出来的） */
-const LOCO_W = 156;
-const LOCO_H = 115;
-const WAGON_W = 126;
-const WAGON_H = 79;
+/** 车头、车厢显示多大（kit/loco、kit/wagon_*，client/tools/art/sprites.py 的 v3 切出来的，宽高比照图） */
+const LOCO_H = 108;
+const LOCO_W = Math.round(LOCO_H * 1.259);
+const WAGON_H = 76;
+const WAGON_W = Math.round(WAGON_H * 1.804);
+/** 车厢之间、车厢和车头之间的缝 */
+const GAP = 2;
 /** 车厢里一排放几颗小方块、每颗多大、一排比一排高多少 */
-const COLS = 5;
-const CUBE = 21;
-const ROW_LIFT = 10;
+const COLS = 6;
+const CUBE = 17;
+const ROW_LIFT = 8;
+/** 铁轨一段显示多高（kit/rail 宽 / 高 6.14） */
+const RAIL_H = 26;
+const RAIL_W = Math.round(RAIL_H * 6.14);
+/** 小人站在车厢后沿放豆：离车轮底下那条线多高 */
+export const DROP_UP = Math.round(WAGON_H * 0.86);
+/** 车厢的颜色：装的颜色掺一点白（豆码在里面看得出来） */
+const WAGON_LIGHT = 0.22;
+/** 开走前顿多久（秒，按倍速前） */
+const DEPART_DELAY = 0.15;
 
 export interface Drop {
   /** 第几列火车 */
@@ -31,12 +43,19 @@ interface Load {
   put: number;
 }
 
+interface WagonView {
+  node: Node;
+  body: Node;
+  front: Node;
+  cubes: Node;
+}
+
 export class Train {
   private node: Node;
-  private wagons: { node: Node; cubes: Node }[] = [];
-  /** 现在停着的是第几列；state：进站中、停着、开走中、没车了 */
+  private wagons: WagonView[] = [];
+  /** 现在停着（或正在进站）的是第几列；state：进站中、停着、正在换车（前一列开走、这一列跟着进来）、没车了 */
   private cur = 0;
-  private state: 'in' | 'stop' | 'out' | 'none' = 'in';
+  private state: 'in' | 'stop' | 'swap' | 'none' = 'in';
   private put = 0;
   private loads: Load[] = [];
   private readonly cap: number;
@@ -75,43 +94,70 @@ export class Train {
       }
       rem -= take;
     }
-    for (let x = -width / 2 - 30; x < width / 2 + 60; x += 60) at(img(layer, 'kit/track', 60, 18, 'track'), x + 30, y + 3);
-    this.node = box('train', layer);
-    this.makeTrain();
-    this.arrive();
+    for (let x = -width / 2 - RAIL_W; x < width / 2 + RAIL_W; x += RAIL_W - 1) at(img(layer, 'kit/rail', RAIL_W, RAIL_H, 'rail'), x + RAIL_W / 2, y + 4);
+    this.node = this.makeTrain(this.cur);
+    this.arrive(this.node);
   }
 
-  /** 这一列的中心：车厢在左、车头在右，整列偏右一点（左边留给小桥） */
+  /** 一列多长 */
+  static lengthOf(wagons: number): number {
+    return wagons * (WAGON_W + GAP) + LOCO_W;
+  }
+
+  /** 一列火车高多少（车头） */
+  static get height(): number {
+    return LOCO_H;
+  }
+
+  /** 这一列的中心 */
   private homeX(): number {
-    return 58;
+    return 0;
   }
 
   private wagonX(i: number): number {
-    const len = this.wagonCount * (WAGON_W + 2) + LOCO_W;
+    const len = Train.lengthOf(this.wagonCount);
     // 第 0 节挨着车头
-    return len / 2 - LOCO_W - 2 - WAGON_W / 2 - i * (WAGON_W + 2);
+    return len / 2 - LOCO_W - GAP - WAGON_W / 2 - i * (WAGON_W + GAP);
   }
 
-  private makeTrain(): void {
-    this.node.destroyAllChildren();
+  /** 第 k 列车厢的颜色：装的颜色掺一点白；还没定颜色的是浅灰白 */
+  private wagonColor(c: number): Color {
+    const base = c >= 0 ? (this.colors[c] ?? Color.WHITE) : new Color(236, 236, 242, 255);
+    const k = c >= 0 ? WAGON_LIGHT : 0;
+    return new Color(
+      Math.round(base.r + (255 - base.r) * k),
+      Math.round(base.g + (255 - base.g) * k),
+      Math.round(base.b + (255 - base.b) * k),
+      255,
+    );
+  }
+
+  private makeTrain(k: number): Node {
+    const node = box('train', this.layer);
     this.wagons = [];
-    const len = this.wagonCount * (WAGON_W + 2) + LOCO_W;
+    const len = Train.lengthOf(this.wagonCount);
+    const L = this.loadOf(k);
     for (let i = 0; i < this.wagonCount; i++) {
-      const w = box('wagon', this.node, WAGON_W, WAGON_H);
+      const w = box('wagon', node, WAGON_W, WAGON_H);
       at(w, this.wagonX(i), WAGON_H / 2);
-      img(w, 'kit/wagon_back', WAGON_W, WAGON_H, 'back');
+      const body = img(w, 'kit/wagon_body', WAGON_W, WAGON_H, 'body');
       const cubes = box('cubes', w);
-      img(w, 'kit/wagon_front', WAGON_W, WAGON_H, 'front');
-      this.wagons.push({ node: w, cubes });
+      const front = img(w, 'kit/wagon_front', WAGON_W, WAGON_H, 'front');
+      img(w, 'kit/wagon_wheels', WAGON_W, WAGON_H, 'wheels');
+      const col = this.wagonColor(L.color[i]);
+      (body.getComponent(Sprite) as Sprite).color = col;
+      (front.getComponent(Sprite) as Sprite).color = col;
+      this.wagons.push({ node: w, body, front, cubes });
     }
-    at(img(this.node, 'kit/loco', LOCO_W, LOCO_H, 'loco'), len / 2 - LOCO_W / 2, LOCO_H / 2 - 2);
+    at(img(node, 'kit/loco', LOCO_W, LOCO_H, 'loco'), len / 2 - LOCO_W / 2, LOCO_H / 2 - 4);
+    return node;
   }
 
-  private arrive(): void {
+  private arrive(node: Node): void {
     this.state = 'in';
     this.onMove('in', false);
-    at(this.node, -this.width / 2 - 320, this.y);
-    tween(this.node)
+    at(node, -this.width / 2 - Train.lengthOf(this.wagonCount) / 2 - 20, this.y);
+    tween(node)
       .to(this.moveSec / this.speed(), { position: new Vec3(this.homeX(), this.y, 0) }, { easing: 'quadOut' })
       .call(() => {
         this.state = 'stop';
@@ -120,31 +166,64 @@ export class Train {
       .start();
   }
 
+  /** 装满了：这一列开走，下一列紧跟着从左边开进来（不等前一列开出屏幕，docs/01 第 3 节「小人不站着等」） */
   private depart(): void {
-    this.state = 'out';
     const last = this.cur >= Math.ceil(this.total / this.cap) - 1;
+    this.state = 'swap';
     this.onMove('out', last);
-    for (let i = 0; i < 3; i++) this.puff(i * 0.12);
-    tween(this.node)
-      .delay(0.15 / this.speed())
-      .to(this.moveSec / this.speed(), { position: new Vec3(this.width / 2 + 320, this.y, 0) }, { easing: 'quadIn' })
+    const old = this.node;
+    for (let i = 0; i < 3; i++) this.puff(old, i * 0.12);
+    const out = this.width / 2 + Train.lengthOf(this.wagonCount) / 2 + 40;
+    tween(old)
+      .delay(DEPART_DELAY / this.speed())
+      .to(this.moveSec / this.speed(), { position: new Vec3(out, this.y, 0) }, { easing: 'quadIn' })
       .call(() => {
-        this.cur++;
-        if (last) {
-          this.state = 'none';
-          return;
-        }
-        this.makeTrain();
-        this.arrive();
+        old.destroy();
+        if (last) this.state = 'none';
+      })
+      .start();
+    if (last) {
+      this.cur++;
+      return;
+    }
+    this.cur++;
+    this.node = this.makeTrain(this.cur);
+    at(this.node, -this.width / 2 - Train.lengthOf(this.wagonCount) / 2 - 20, this.y);
+    const next = this.node;
+    tween(next)
+      .delay(DEPART_DELAY / this.speed())
+      .call(() => this.onMove('in', false))
+      .to(this.moveSec / this.speed(), { position: new Vec3(this.homeX(), this.y, 0) }, { easing: 'quadOut' })
+      .call(() => {
+        if (this.node !== next) return;
+        this.state = 'stop';
+        this.check();
       })
       .start();
   }
 
+  /** 换一次车（从开走到下一列停稳）要多久：按倍速前的秒数，小人那边的时间也是按倍速前算的 */
+  get swapTime(): number {
+    return DEPART_DELAY + this.moveSec;
+  }
+
+  /** 第 k 列现在是什么情况：'stop' 停着能放；'coming' 正在进站或换车；'later' 还要等前面的装满；'gone' 已经开走了 */
+  status(k: number): 'stop' | 'coming' | 'later' | 'gone' {
+    if (k < this.cur || this.state === 'none') return 'gone';
+    if (k > this.cur) return 'later';
+    return this.state === 'stop' ? 'stop' : 'coming';
+  }
+
+  /** 现在停着的是第几列 */
+  get current(): number {
+    return this.cur;
+  }
+
   /** 烟囱冒一团烟 */
-  private puff(delay: number): void {
-    const len = this.wagonCount * (WAGON_W + 2) + LOCO_W;
-    const p = img(this.layer, 'kit/circle_white', 26, 26, 'puff');
-    at(p, this.node.position.x + len / 2 - 38, this.y + LOCO_H + 4);
+  private puff(node: Node, delay: number): void {
+    const len = Train.lengthOf(this.wagonCount);
+    const p = img(this.layer, 'kit/circle_white', 24, 24, 'puff');
+    at(p, node.position.x + len / 2 - LOCO_W * 0.55, this.y + LOCO_H + 2);
     p.setScale(0.3, 0.3, 1);
     const op = opacity(p);
     op.opacity = 0;
@@ -191,10 +270,27 @@ export class Train {
           if (L.resv[i] < this.perWagon && (wagon < 0 || L.resv[i] < L.resv[wagon])) wagon = i;
         }
       }
-      if (L.color[wagon] < 0) L.color[wagon] = color;
+      if (L.color[wagon] < 0) {
+        L.color[wagon] = color;
+        // 停着（或正在进站）的这一列：车厢马上染上这个颜色
+        const v = k === this.cur ? this.wagons[wagon] : undefined;
+        if (v) {
+          const col = this.wagonColor(color);
+          (v.body.getComponent(Sprite) as Sprite).color = col;
+          (v.front.getComponent(Sprite) as Sprite).color = col;
+        }
+      }
       const index = L.resv[wagon]++;
-      // 火车在画的上面：小人站在铁轨下沿放豆
-      return { train: k, wagon, index, x: this.homeX() + this.wagonX(wagon), y: this.y - 30 };
+      // 站在车厢后沿：按第几颗分到左、中、右，前后错开一点
+      const lane = (index % 3) - 1;
+      const row = Math.floor(index / 3) % 2;
+      return {
+        train: k,
+        wagon,
+        index,
+        x: this.homeX() + this.wagonX(wagon) + lane * WAGON_W * 0.28,
+        y: this.y + DROP_UP + row * 7,
+      };
     }
   }
 
@@ -212,15 +308,19 @@ export class Train {
     if (w && this.cur === d.train) {
       const col = d.index % COLS;
       const row = Math.floor(d.index / COLS);
-      const cube = img(w.cubes, 'kit/bead', CUBE, CUBE * 1.25, 'cube');
+      const cube = img(w.cubes, 'kit/stud', CUBE, CUBE * 1.056, 'cube');
       (cube.getComponent(Sprite) as Sprite).color = this.colors[color] ?? Color.WHITE;
       const x = (col - (COLS - 1) / 2) * (CUBE + 1);
       // 第一排大半截藏在前挡板后面，往上一排排码到斗口
-      const y = 2 + row * ROW_LIFT;
+      const y = 6 + row * ROW_LIFT;
       // 从上往下数：后放的在上面一排，要画在下面一排的后面（下面一排盖住它的侧面）
       cube.setSiblingIndex(0);
       at(cube, x, y + 16);
+      Tween.stopAllByTarget(w.node);
       tween(cube).to(0.12, { position: new Vec3(x, y, 0) }, { easing: 'quadIn' }).start();
+      // 车厢接住一颗：轻轻往下一沉
+      w.node.setScale(1.03, 0.96, 1);
+      tween(w.node).to(0.12, { scale: new Vec3(1, 1, 1) }, { easing: 'backOut' }).start();
     }
     this.check();
   }

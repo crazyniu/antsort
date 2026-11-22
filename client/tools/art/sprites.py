@@ -205,6 +205,86 @@ def props() -> None:
             save(crop(a, b), name, h)
 
 
+RAW3 = REPO / 'art/raw/sprites_v3'
+
+
+def shine(a: np.ndarray, lo: float = 0.9) -> tuple[np.ndarray, np.ndarray]:
+    """白色的立体小件切成两张：灰度本体（局内染色）和不染色的高光（最亮的那些像素，白的、按亮度给透明度）"""
+    rgb, alpha = a[..., :3], a[..., 3]
+    v = rgb.max(-1)
+    body = np.zeros_like(a)
+    body[..., 0] = body[..., 1] = body[..., 2] = np.clip(v / 0.96, 0, 1)
+    body[..., 3] = alpha
+    hi = np.zeros_like(a)
+    hi[..., :3] = 1
+    hi[..., 3] = alpha * np.clip((v - lo) / (1 - lo), 0, 1) * 0.85
+    return body, hi
+
+
+def v3() -> None:
+    """简洁版（效果图 H，docs/01 第 3 节）的素材，art/raw/sprites_v3/：
+    beads.png  左：带一个圆凸点的积木豆；右：带盖的数字方块。都是白的，切成本体（染色）+ 高光（不染色）
+    train.png  左：车头（青色，不染色）；右：空车厢（白的，按装的颜色染色）
+    bridge.png 右边那段铁轨（横着平铺）；bridge2.png 竖着跨过铁轨的人行天桥"""
+    a = unkey(RAW3 / 'beads.png')
+    bs = rows(boxes(a[..., 3], 4000))
+    if len(bs) != 2:
+        raise SystemExit(f'beads.png 里要豆和方块，认出来 {len(bs)} 个')
+    bead, block = (crop(a, b) for b in bs)
+    body, hi = shine(bead)
+    save(body, 'stud', STUD_H)
+    save(hi, 'stud_hi', STUD_H)
+    print(f'  kit/stud 宽 / 高：{bead.shape[1] / bead.shape[0]:.4f}')
+    body, hi = shine(block)
+    save(body, 'box', BOX_H)
+    save(hi, 'box_hi', BOX_H)
+    print(f'  kit/box 宽 / 高：{block.shape[1] / block.shape[0]:.4f}')
+    a = unkey(RAW3 / 'train.png')
+    bs = rows(boxes(a[..., 3], 4000))
+    if len(bs) != 2:
+        raise SystemExit(f'train.png（v3）里要车头和车厢，认出来 {len(bs)} 个')
+    loco, wagon = (crop(a, b) for b in bs)
+    save(loco, 'loco', LOCO_H)
+    print(f'  kit/loco 宽 / 高：{loco.shape[1] / loco.shape[0]:.4f}')
+    body = np.zeros_like(wagon)
+    rgb = wagon[..., :3]
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    # 车厢的白身子染色（上半截的斗里斗外都算；下半截只算很亮的，轮毂是浅灰的不算）；轮子、挂钩留在不染色的那张
+    rowk = (np.arange(wagon.shape[0]) / wagon.shape[0])[:, None]
+    shell = ((mx - mn) < 0.12) & ((rowk < 0.5) | (mx > 0.8))
+    body[..., 0] = body[..., 1] = body[..., 2] = np.clip(mx / 0.96, 0, 1)
+    body[..., 3] = wagon[..., 3] * shell
+    rest = wagon.copy()
+    rest[..., 3] = wagon[..., 3] * ~shell
+    save(body, 'wagon_body', WAGON3_H)
+    save(rest, 'wagon_wheels', WAGON3_H)
+    front = body.copy()
+    front[: int(front.shape[0] * WAGON3_RIM)] = 0
+    save(front, 'wagon_front', WAGON3_H)
+    print(f'  kit/wagon_body 宽 / 高：{wagon.shape[1] / wagon.shape[0]:.4f}')
+    a = unkey(RAW3 / 'bridge.png')
+    bs = sorted(boxes(a[..., 3], 4000), key=lambda b: b[0])
+    track = crop(a, bs[-1])
+    save(track, 'rail', RAIL_H)
+    print(f'  kit/rail 宽 / 高：{track.shape[1] / track.shape[0]:.4f}')
+    a = unkey(RAW3 / 'bridge2.png')
+    bs = boxes(a[..., 3], 4000)
+    if len(bs) != 1:
+        raise SystemExit(f'bridge2.png 里要一座桥，认出来 {len(bs)} 个')
+    b = crop(a, bs[0])
+    save(b, 'bridge', BRIDGE_H)
+    print(f'  kit/bridge 宽 / 高：{b.shape[1] / b.shape[0]:.4f}')
+
+
+# 简洁版素材显示多高（设计单位，按 3 倍存）；车厢图从上往下多少比例是斗口
+STUD_H = 48
+BOX_H = 96
+LOCO_H = 120
+WAGON3_H = 84
+WAGON3_RIM = 0.34
+RAIL_H = 40
+BRIDGE_H = 300
+
 # 车厢图从上往下多少比例是斗口（看图定的）
 WAGON_RIM = 0.30
 # 船显示多高（设计单位，按 3 倍存，留一点余量）；船图从上往下多少比例是靠近我们这一侧船帮的上沿（看图定的）
@@ -212,6 +292,6 @@ BOAT_H = 132
 BOAT_RIM = 0.79
 
 if __name__ == '__main__':
-    which = sys.argv[1:] or ['walk', 'carry', 'train', 'boat', 'moored', 'props']
+    which = sys.argv[1:] or ['walk', 'carry', 'v3']
     for k in which:
-        {'walk': walk, 'carry': carry, 'train': train, 'boat': boat, 'moored': moored, 'props': props}[k]()
+        {'walk': walk, 'carry': carry, 'train': train, 'boat': boat, 'moored': moored, 'props': props, 'v3': v3}[k]()

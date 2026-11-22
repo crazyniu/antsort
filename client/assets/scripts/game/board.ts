@@ -1,21 +1,19 @@
-// 像素画（docs/01 第 1.2、1.3 节）：把拼豆画摆出来，一格一颗带厚度的小方块，紧挨着排；搬走的格子露出米色的底格。
+// 像素画（docs/01 第 1.2、1.3、3 节）：把拼豆画摆出来，一格一颗带圆凸点的积木豆（kit/stud 染色 + kit/stud_hi 高光），紧挨着排；
+// 搬走的格子露出背景。
 // 只管画，不管规则：能不能搬、搬哪颗都由 core/dig/rules.ts 算，局内页面按事件调 dig()。
 // 这里自己留一份「画面上的豆」：规则是当场算完的，画面慢慢播，两边不同步。
 import { Color, Node, Sprite, Tween, Vec3, tween } from 'cc';
 import { DigLevel } from '../core/dig/level';
 import type { GameState } from '../core/dig/rules';
 import * as fx from '../ui/fx';
-import { at, box, hex, img, size, tint } from '../ui/kit';
+import { at, box, hex, img, size } from '../ui/kit';
 
-/** 一格最大多大（设计单位）：小画也不放得太大，四周留着草地 */
-const CELL_MAX = 22;
-/** 豆的图（kit/bead）比一格高出多少：下面那一条是侧面 */
-const SIDE = 0.25;
+/** 一格最大多大（设计单位）：小画也不放得太大 */
+const CELL_MAX = 24;
+/** 豆的图（kit/stud，宽 / 高 0.947）比一格高出多少：下面那一点垂到下一行，被下一行盖住 */
+const SIDE = 1 / 0.947 - 1;
 /** 摞着的豆往上抬多少格 */
 const LIFT = 0.22;
-/** 豆搬走以后露出来的底格：米色的小格子，格子之间一道深一点的缝 */
-const PRINT = new Color(255, 232, 190, 255);
-const PRINT_GAP = new Color(235, 203, 150, 255);
 
 export class Board {
   readonly node: Node;
@@ -25,13 +23,10 @@ export class Board {
   readonly colors: Color[];
   /** 画面上每个位置从下到上的豆（开局、重画时从局面抄一份） */
   private cols: number[][] = [];
-  private printL: Node;
   private beadL: Node;
   private glossL: Node;
   private beads: Node[] = [];
   private gloss: Node[] = [];
-  /** 每一格的米色底格：豆搬空了才造出来 */
-  private prints: (Node | null)[] = [];
 
   /** parent 里 w × h 的一块地方（居中摆） */
   constructor(parent: Node, w: number, h: number, private lv: DigLevel) {
@@ -39,7 +34,6 @@ export class Board {
     this.colors = lv.palette.map((c) => hex(c));
     this.node = box('board', parent, lv.w * this.cell, lv.h * this.cell);
     // 分层放：同一层用同一张图，引擎才能合批
-    this.printL = box('prints', this.node);
     this.beadL = box('beads', this.node);
     this.glossL = box('gloss', this.node);
   }
@@ -66,7 +60,6 @@ export class Board {
 
   /** 画出整张（intro：从中间往外依次弹出） */
   build(s: GameState, intro: boolean, stagger = 0.02): void {
-    this.printL.destroyAllChildren();
     this.beadL.destroyAllChildren();
     this.glossL.destroyAllChildren();
     this.cols = s.cols.map((c) => c.slice());
@@ -74,14 +67,12 @@ export class Board {
     const n = this.lv.w * this.lv.h;
     this.beads = [];
     this.gloss = [];
-    this.prints = [];
     // 从上到下一行行放：下面一行盖住上面一行垂下来的侧面；豆的面比一格矮，每颗下面都露一条侧面
     for (let p = 0; p < n; p++) {
       const at0 = this.pos(p);
-      this.prints.push(null);
-      const bead = img(this.beadL, 'kit/bead', C, C * (1 + SIDE), 'bead');
-      // 光泽：不染色的高光片，和豆同步（docs/01 第 3 节的「带厚度的立体小方块」）
-      const gl = img(this.glossL, 'kit/bead_top', C, C * (1 + SIDE), 'gl');
+      const bead = img(this.beadL, 'kit/stud', C, C * (1 + SIDE), 'bead');
+      // 高光：不染色，和豆同步（染色是乘法，白高光会被染掉，所以另叠一张）
+      const gl = img(this.glossL, 'kit/stud_hi', C, C * (1 + SIDE), 'gl');
       this.beads.push(bead);
       this.gloss.push(gl);
       this.render(p);
@@ -106,15 +97,6 @@ export class Board {
     gl.setScale(1, 1, 1);
     bead.active = top >= 0;
     gl.active = top >= 0;
-    // 原来有豆的格子搬空了：露出米色底格（这时候才造）
-    if (top < 0 && this.lv.cols[p].length > 0 && !this.prints[p]) {
-      const at1 = this.pos(p);
-      const print = at(tint(this.printL, C, C, PRINT_GAP, 'gap'), at1.x, at1.y);
-      tint(print, C - 2, C - 2, PRINT, 'print');
-      this.prints[p] = print;
-    }
-    const print = this.prints[p];
-    if (print) print.active = top < 0;
     if (top < 0) return;
     const at0 = this.pos(p);
     // 图的上面那一块正好盖住这一格，侧面垂在格子下面；摞着的往上抬一点

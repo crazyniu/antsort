@@ -1,5 +1,7 @@
-// 小人（docs/01 第 3 节）：从船上的方块里「跳」上岸（一道弧线）→ 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
-// → 绕到画上面、走到车厢边放进火车 → 空着手沿铁轨走出画面消失。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
+// 小人（docs/01 第 3 节）：从托盘里的方块顶上走出来 → 走道 → 近的那座天桥 → 过桥到画那边 → 沿着画四周（看不见的一圈）绕到离那颗豆最近的一边
+// → 走进去抱起豆 → 回到画下面、走到车厢后沿放进火车 → 这一队还有能搬的就直接去搬下一颗（不再过桥），没有了就过桥走回方块里。
+// 只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
+// 小人不站着等车：放进下一列的，按算好的下一列停稳的时刻放慢回程，到的时候车刚好停稳。
 // 出发的先后要守住一条：一颗豆要等它面前那条路上的豆都被搬走了才能去搬（不然看着像是从里面掏的）。只卡这一条，
 // 不按「一队搬完下一队才动」排：几支小队只要各自的豆露出来了就同时干活，画面才热闹。
 // 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、双手伸在身前抱东西一套（kit/wk_*，tools/art/sprites.py 切的）。
@@ -10,10 +12,13 @@ import { frame } from '../ui/res';
 import type { CarView } from './station';
 import type { Drop, Train } from './train';
 
-/** 小人显示多高、抱着的豆多宽（kit/cube 宽 40 高 44）、从船上跳上岸用几秒 */
+/** 小人显示多高、抱着的豆多宽（kit/cube 宽 40 高 44） */
 const H = 46;
 const CUBE = 23;
-const JUMP = 0.3;
+/** 赶下一列火车时最多放慢到几成速度（再慢就看得出来了） */
+const MIN_PACE = 0.5;
+/** 空着手走回方块的速度（比平时快一点，路上不堆人） */
+const HOME_PACE = 1.3;
 /** 姿势：f 正面、s 侧面、b 背面；前面加 c 是举着豆的 */
 const POSES = ['f', 's', 'b', 'cf', 'cs', 'cb'] as const;
 type Pose = (typeof POSES)[number];
@@ -31,15 +36,20 @@ export interface Job {
 
 /** 场地的几何（特效层的坐标） */
 export interface Field {
-  /** 画四周那圈路的中线：左、右、下（河岸）、上（铁轨下面那条） */
+  /** 画四周看不见的那一圈：左、右、下（车厢后沿，小人站在这条线上放豆）、上 */
   l: number;
   r: number;
   b: number;
   t: number;
-  /** 那圈路四个角的圆角半径（中线上的） */
+  /** 那一圈四个角的圆角半径 */
   rad: number;
-  /** 方块现在在哪里（船上） */
+  /** 方块现在在哪里（托盘里） */
   carPos: (car: CarView) => Vec3;
+  /** 小人从方块的哪个高度走出来（托盘上沿）、走道的中线 */
+  exitY: number;
+  walkY: number;
+  /** 两座天桥的 x（桥从走道一直通到那一圈的下沿） */
+  bridges: number[];
 }
 
 interface Walker {
@@ -54,12 +64,13 @@ interface Walker {
   seg: number;
   x: number;
   y: number;
-  /** 0 去搬、1 往火车走、2 在车厢边等火车停稳、3 放完了走出画面 */
+  /** 0 去搬、1 往火车走、2 在车厢边等火车停稳、3 放完了走回方块 */
   phase: number;
-  /** 从船上跳上岸：起点和进度（-1 = 没在跳） */
-  jx: number;
-  jy: number;
-  jumpT: number;
+  /** 这一趟按几成速度走（赶下一列火车时放慢）；预计什么时候走到车厢边 */
+  pace: number;
+  eta: number;
+  /** 从哪个方块出来的（走回去用） */
+  home: Vec3;
   drop: Drop | null;
   ox: number;
   oy: number;
@@ -224,29 +235,72 @@ export class Crew {
     return out;
   }
 
-  /** 去搬一颗豆的整条路：第一个点是跳上岸的落点（船正上方的河岸路），再沿路绕到进入点，走进去 */
-  private routeOut(job: Job): Vec3[] {
+  /** 离 x 最近的那座桥 */
+  private bridgeFor(x: number): number {
+    const bs = this.field.bridges;
+    let best = bs[0] ?? 0;
+    for (const b of bs) if (Math.abs(b - x) < Math.abs(best - x)) best = b;
+    return best;
+  }
+
+  /**
+   * 去搬一颗豆的整条路。from 不给：从方块顶上出来 → 走道 → 近的桥 → 过桥到那一圈的下沿 → 沿着那一圈绕到进入点 → 走进去；
+   * from 给了（刚在车厢边放完豆）：从车厢后沿直接沿那一圈绕过去，不过桥
+   */
+  private routeOut(job: Job, from?: Vec3): Vec3[] {
     const f = this.field;
-    const from = f.carPos(job.car);
-    // 落点避开两头的圆角（那里路往里拐了）
-    const R = this.rad;
-    const bank = new Vec3(Math.min(f.r - R, Math.max(f.l + R, from.x)), f.b, 0);
-    const pts: Vec3[] = [bank];
-    pts.push(...this.ring(bank, job.inside[0]));
+    const pts: Vec3[] = [];
+    let start: Vec3;
+    if (from) {
+      start = new Vec3(from.x, f.b, 0);
+      pts.push(start);
+    } else {
+      const c = f.carPos(job.car);
+      const bx = this.bridgeFor(c.x);
+      start = new Vec3(bx, f.b, 0);
+      pts.push(new Vec3(c.x, f.exitY, 0), new Vec3(c.x, f.walkY, 0), new Vec3(bx, f.walkY, 0), start);
+    }
+    pts.push(...this.ring(start, job.inside[0]));
     for (let i = 1; i < job.inside.length; i++) pts.push(job.inside[i]);
     return pts;
   }
 
-  /** 抱着豆去火车的路：原路退到那圈路上，绕到画上面车厢那一格，再往上走到车厢边 */
+  /** 抱着豆去火车的路：原路退到那一圈上，绕到下沿、车厢上面那一段，再走到放豆的位置 */
   private routeBack(job: Job, d: Drop): Vec3[] {
     const pts: Vec3[] = [];
     for (let i = job.inside.length - 2; i >= 1; i--) pts.push(job.inside[i]);
-    // 回到路上：第 0 个点落到路的中线上（角上是圆弧）
     pts.push(this.ringAt(this.ringS(job.inside[0])));
-    const below = new Vec3(Math.min(this.field.r, Math.max(this.field.l, d.x)), this.field.t, 0);
-    pts.push(...this.ring(job.inside[0], below));
+    const above = new Vec3(Math.min(this.field.r, Math.max(this.field.l, d.x)), this.field.b, 0);
+    pts.push(...this.ring(job.inside[0], above));
     pts.push(new Vec3(d.x, d.y, 0));
     return pts;
+  }
+
+  /** 空着手走回方块：沿下沿走到近的桥 → 过桥 → 走道 → 走进方块 */
+  private routeHome(w: Walker): Vec3[] {
+    const f = this.field;
+    const bx = this.bridgeFor(w.home.x);
+    return [
+      new Vec3(w.x, f.b, 0),
+      new Vec3(bx, f.b, 0),
+      new Vec3(bx, f.walkY, 0),
+      new Vec3(w.home.x, f.walkY, 0),
+      new Vec3(w.home.x, f.exitY, 0),
+      new Vec3(w.home.x, w.home.y, 0),
+    ];
+  }
+
+  /**
+   * 第 k 列火车大概什么时候停稳（小人的时间）：停着就是现在；正在进站、换车按一整次换车算；
+   * 还要等前面一列装满的，等往前一列放豆的小人都到了，再加一次换车
+   */
+  private readyTime(k: number, depth = 0): number {
+    const st = this.train.status(k);
+    if (st === 'stop' || st === 'gone' || depth > 4) return this.now;
+    if (st === 'coming') return this.now + this.train.swapTime;
+    let last = this.readyTime(k - 1, depth + 1);
+    for (const w of this.walkers) if (w.drop && w.drop.train === k - 1 && (w.phase === 1 || w.phase === 2)) last = Math.max(last, w.eta);
+    return last + this.train.swapTime;
   }
 
   private static len(pts: Vec3[]): number {
@@ -263,34 +317,24 @@ export class Crew {
     this.now += step;
     this.dispatch();
     const v = this.cfg.walk * step;
-    /** 放完豆空着手走出去的走快一点，铁轨边不堆人 */
-    const vOut = v * 1.6;
     for (let i = this.walkers.length - 1; i >= 0; i--) {
       const w = this.walkers[i];
       if (w.phase === 2) {
         if (w.drop && this.train.ready(w.drop.train)) {
-          // 放进车厢，然后空着手沿铁轨走出画面
+          // 放进车厢；这一队还有现在就能搬的，直接去搬下一颗，没有就走回方块
           this.train.drop(w.drop, w.job.color);
           w.carry = false;
-          const exitX = (w.x >= 0 ? 1 : -1) * (this.cfg.width / 2 + 40);
-          w.pts = [new Vec3(w.x, w.y, 0), new Vec3(exitX, w.y + 10, 0)];
-          w.seg = 0;
-          w.phase = 3;
+          w.drop = null;
+          if (!this.takeNext(w)) {
+            w.pts = this.routeHome(w);
+            w.seg = 0;
+            w.phase = 3;
+          }
         }
         this.draw(w, step);
         continue;
       }
-      // 从船上跳上岸：一道弧线，落地才开始走
-      if (w.jumpT >= 0) {
-        w.jumpT = Math.min(1, w.jumpT + step / JUMP);
-        const k = w.jumpT;
-        w.x = w.jx + (w.pts[0].x - w.jx) * k;
-        w.y = w.jy + (w.pts[0].y - w.jy) * k + Math.sin(Math.PI * k) * 30;
-        if (w.jumpT >= 1) w.jumpT = -1;
-        this.draw(w, step);
-        continue;
-      }
-      this.move(w, w.phase === 3 ? vOut : v);
+      this.move(w, w.phase === 3 ? v * HOME_PACE : w.phase === 1 ? v * w.pace : v);
       if (w.phase === 3) {
         if (w.seg >= w.pts.length - 1) this.free(i);
         else this.draw(w, step);
@@ -305,6 +349,11 @@ export class Crew {
           w.pts = [new Vec3(w.x, w.y, 0), ...this.routeBack(w.job, w.drop)];
           w.seg = 0;
           w.phase = 1;
+          // 掐着点到：车要过一会儿才停稳的，回程放慢，到的时候车刚好停稳（最慢放到 MIN_PACE）
+          const t0 = Crew.len(w.pts) / this.cfg.walk;
+          const wait = this.readyTime(w.drop.train) - this.now;
+          w.pace = wait > t0 ? Math.max(MIN_PACE, t0 / wait) : 1;
+          w.eta = this.now + t0 / w.pace;
         } else {
           w.phase = 2;
           w.mdx = 0;
@@ -380,10 +429,10 @@ export class Crew {
   }
 
   /** 这颗豆现在能派人去搬吗：路上的格子都（将在它到之前）空出来了，同一格摞在它上面的也都派出去了。能就返回路线 */
-  private ready(job: Job): Vec3[] | null {
+  private ready(job: Job, from?: Vec3): Vec3[] | null {
     if ((this.cellSent.get(job.cell) ?? 0) < (this.rank.get(job) ?? 0)) return null;
     for (const c of job.need) if (this.waitingOn(c)) return null;
-    let pts = this.routes.get(job);
+    let pts = from ? this.routeOut(job, from) : this.routes.get(job);
     if (!pts) this.routes.set(job, (pts = this.routeOut(job)));
     const arrive = this.now + Crew.len(pts) / this.cfg.walk;
     if ((this.cellPickAt.get(job.cell) ?? 0) > arrive - 0.02) return null;
@@ -408,11 +457,7 @@ export class Crew {
           if (pts) at0 = i;
         }
         if (!pts) break;
-        const job = q.splice(at0, 1)[0];
-        this.rank.delete(job);
-        this.routes.delete(job);
-        this.cellSent.set(job.cell, (this.cellSent.get(job.cell) ?? 0) + 1);
-        this.cellPickAt.set(job.cell, Math.max(this.cellPickAt.get(job.cell) ?? 0, this.now + Crew.len(pts) / this.cfg.walk));
+        const job = this.claim(q, at0, pts);
         this.spawn(job, pts);
         this.onSend(job);
         // 落后太多就不补了：一帧最多连着放几个
@@ -420,6 +465,38 @@ export class Crew {
       }
       this.nextAt.set(car, next);
     }
+  }
+
+  /** 把队里第 i 颗派出去（记下这一格派走了几颗、最晚什么时候被抱起来） */
+  private claim(q: Job[], i: number, pts: Vec3[]): Job {
+    const job = q.splice(i, 1)[0];
+    this.rank.delete(job);
+    this.routes.delete(job);
+    this.cellSent.set(job.cell, (this.cellSent.get(job.cell) ?? 0) + 1);
+    this.cellPickAt.set(job.cell, Math.max(this.cellPickAt.get(job.cell) ?? 0, this.now + Crew.len(pts) / this.cfg.walk));
+    return job;
+  }
+
+  /** 刚放完豆的小人：这一队还有现在就能去搬的，直接去搬（从车厢后沿走过去，不过桥） */
+  private takeNext(w: Walker): boolean {
+    const car = w.job.car;
+    const q = this.queues.get(car);
+    if (!q || q.length === 0 || this.now < car.readyAt) return false;
+    const from = new Vec3(w.x, w.y, 0);
+    const n = Math.min(q.length, 32);
+    for (let i = 0; i < n; i++) {
+      const pts = this.ready(q[i], from);
+      if (!pts) continue;
+      const job = this.claim(q, i, pts);
+      w.job = job;
+      w.pts = [from, ...pts];
+      w.seg = 0;
+      w.phase = 0;
+      w.pace = 1;
+      this.onSend(job);
+      return true;
+    }
+    return false;
   }
 
   private spawn(job: Job, pts: Vec3[]): void {
@@ -437,6 +514,9 @@ export class Crew {
         x: 0,
         y: 0,
         phase: 0,
+        pace: 1,
+        eta: 0,
+        home: new Vec3(),
         drop: null,
         ox: 0,
         oy: 0,
@@ -444,22 +524,18 @@ export class Crew {
         mdx: 0,
         mdy: 1,
         shown: '',
-        jx: 0,
-        jy: 0,
-        jumpT: -1,
       };
     }
     w.job = job;
     w.pts = pts;
     w.seg = 0;
-    // 从船上（方块的位置）跳到岸上的第一个点
+    // 从方块里走出来（方块顶上），走完回到这里
     const from = this.field.carPos(job.car);
-    w.jx = from.x;
-    w.jy = from.y + 10;
-    w.x = w.jx;
-    w.y = w.jy;
-    w.jumpT = 0;
+    w.home = new Vec3(from.x, from.y, 0);
+    w.x = from.x;
+    w.y = from.y;
     w.phase = 0;
+    w.pace = 1;
     w.drop = null;
     w.ox = (Math.random() - 0.5) * 14;
     w.oy = (Math.random() - 0.5) * 10;

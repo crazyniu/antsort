@@ -257,7 +257,8 @@ export class Crew {
       pts.push(start);
     } else {
       const c = f.carPos(job.car);
-      const bx = this.bridgeFor(c.x);
+      // 走哪座桥按要去的豆在画的哪一边挑（不按方块在哪）：两座桥分着走，不挤在一座上
+      const bx = this.bridgeFor(job.inside[0].x);
       start = new Vec3(bx, f.b, 0);
       pts.push(new Vec3(c.x, f.exitY, 0), new Vec3(c.x, f.walkY, 0), new Vec3(bx, f.walkY, 0), new Vec3(bx, f.landY, 0), start);
     }
@@ -280,7 +281,7 @@ export class Crew {
   /** 空着手走回方块：沿下沿走到近的桥 → 过桥 → 走道 → 走进方块 */
   private routeHome(w: Walker): Vec3[] {
     const f = this.field;
-    const bx = this.bridgeFor(w.home.x);
+    const bx = this.bridgeFor(w.x);
     return [
       new Vec3(w.x, f.b, 0),
       new Vec3(bx, f.b, 0),

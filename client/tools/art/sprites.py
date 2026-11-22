@@ -228,18 +228,15 @@ def shine(a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def v3() -> None:
     """简洁版（效果图 H，docs/01 第 3 节）的素材，art/raw/sprites_v3/：
-    beads.png  左：带一个圆凸点的积木豆；右：带盖的数字方块。都是白的，切成本体（染色）+ 高光（不染色）
+    beads.png  右：带盖的数字方块（左边那颗凸点豆不用了，拼豆换成了 gem.png 的宝石）。白的，切成本体（染色）+ 高光（不染色）
+    gem.png    正方体宝石（拼豆），无色；bridge3.png 照效果图 H 重画的拱桥
     train.png  左：车头（青色，不染色）；右：空车厢（白的，按装的颜色染色）
-    bridge.png 右边那段铁轨（横着平铺）；bridge2.png 竖着跨过铁轨的人行天桥"""
+    bridge.png 右边那段铁轨（横着平铺；左边那座斜桥不用）"""
     a = unkey(RAW3 / 'beads.png')
     bs = rows(boxes(a[..., 3], 4000))
     if len(bs) != 2:
         raise SystemExit(f'beads.png 里要豆和方块，认出来 {len(bs)} 个')
-    bead, block = (crop(a, b) for b in bs)
-    body, hi = shine(bead)
-    save(body, 'stud', STUD_H)
-    save(hi, 'stud_hi', STUD_H)
-    print(f'  kit/stud 宽 / 高：{bead.shape[1] / bead.shape[0]:.4f}')
+    block = crop(a, bs[1])
     body, hi = shine(block)
     save(body, 'box', BOX_H)
     save(hi, 'box_hi', BOX_H)
@@ -267,28 +264,41 @@ def v3() -> None:
     front[: int(front.shape[0] * WAGON3_RIM)] = 0
     save(front, 'wagon_front', WAGON3_H)
     print(f'  kit/wagon_body 宽 / 高：{wagon.shape[1] / wagon.shape[0]:.4f}')
+    # 正方体宝石（拼豆，用户 2026-11-22 定的）：无色的一颗，切成本体（染色）+ 高光
+    gem_file = RAW3 / 'gem.png'
+    if gem_file.exists():
+        a = unkey(gem_file)
+        bs = boxes(a[..., 3], 4000)
+        if len(bs) != 1:
+            raise SystemExit(f'gem.png 里要一颗宝石，认出来 {len(bs)} 个')
+        g = crop(a, bs[0])
+        body, hi = shine(g)
+        save(body, 'gem', GEM_H)
+        save(hi, 'gem_hi', GEM_H)
+        print(f'  kit/gem 宽 / 高：{g.shape[1] / g.shape[0]:.4f}')
+    # 拱桥（照效果图 H 左边那座重画的）
+    arch_file = RAW3 / 'bridge3.png'
+    if arch_file.exists():
+        a = unkey(arch_file)
+        bs = sorted(boxes(a[..., 3], 4000), key=lambda b: (b[2] - b[0]) * (b[3] - b[1]), reverse=True)
+        g = crop(a, bs[0])
+        save(g, 'arch', ARCH_H)
+        print(f'  kit/arch 宽 / 高：{g.shape[1] / g.shape[0]:.4f}')
     a = unkey(RAW3 / 'bridge.png')
     bs = sorted(boxes(a[..., 3], 4000), key=lambda b: b[0])
     track = crop(a, bs[-1])
     save(track, 'rail', RAIL_H)
     print(f'  kit/rail 宽 / 高：{track.shape[1] / track.shape[0]:.4f}')
-    a = unkey(RAW3 / 'bridge2.png')
-    bs = boxes(a[..., 3], 4000)
-    if len(bs) != 1:
-        raise SystemExit(f'bridge2.png 里要一座桥，认出来 {len(bs)} 个')
-    b = crop(a, bs[0])
-    save(b, 'bridge', BRIDGE_H)
-    print(f'  kit/bridge 宽 / 高：{b.shape[1] / b.shape[0]:.4f}')
 
 
 # 简洁版素材显示多高（设计单位，按 3 倍存）；车厢图从上往下多少比例是斗口
-STUD_H = 48
+GEM_H = 50
+ARCH_H = 200
 BOX_H = 96
 LOCO_H = 120
 WAGON3_H = 84
 WAGON3_RIM = 0.34
 RAIL_H = 40
-BRIDGE_H = 300
 
 # 车厢图从上往下多少比例是斗口（看图定的）
 WAGON_RIM = 0.30

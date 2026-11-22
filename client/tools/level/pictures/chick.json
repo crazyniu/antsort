@@ -1,0 +1,41 @@
+{
+ "name": "小黄鸡",
+ "colors": {
+  "A": "#FFE129",
+  "B": "#9F565B",
+  "C": "#A8E522",
+  "D": "#FF7386",
+  "E": "#FFA21A"
+ },
+ "rows": [
+  "...................BBBB.........",
+  ".................BBCCBB.........",
+  "................BCCCCBB.........",
+  "................BCCCCBB.........",
+  "...........BBBBBCCCCB...........",
+  "........BBBAAAAABBBBBBB.........",
+  "........BBBAAAAABBBBBBB.........",
+  ".......BAAAAAAAAAAAAAAAB........",
+  ".....BBAAAAAAAAAAAAAAAAABB......",
+  ".....BBAAAAAAAAAAAAAAAAABB......",
+  "....BAAAAAAAAAAAAAAAAAAAAAB.....",
+  "....BAAAAAAAAAAAAAAAAAAAAAB.....",
+  "....BAAAAAAAAAAAAAAAAAAAAAB.....",
+  "...BAAAAAADBBAAAAAADBAAAAAABB...",
+  "...BAAAAAABBBAAAAAABBAAAAAABB...",
+  "..BBAAAAAABBBAAAAAABBAAAAAABB...",
+  ".BBAAAADDDAAAAEEEAAAADDDAAAAAB..",
+  "BAAAAAADDDAAAAAEAAAAADDDAAAAAABB",
+  "BAAAAAAAAAAAAAAAAAAAAAAAAAAAAABB",
+  "BAAAAAAAAAAAAAAAAAAAAAAAAAAAAABB",
+  ".BBABAAAAAAAAAAAAAAAAAAAAABAAB..",
+  "...BBAAAAAAAAAAAAAAAAAAAAABBB...",
+  "...BBAAAAAAAAAAAAAAAAAAAAABBB...",
+  ".....BBAAAAAAAAAAAAAAAAABB......",
+  ".......BAAAAAAAAAAAAAAAB........",
+  ".......BAAAAAAAAAAAAAAAB........",
+  "........BBBAAAAAAAAABBB.........",
+  "........BBEEEBBBBBEEEBB.........",
+  "..........BBBB...BBBB..........."
+ ]
+}

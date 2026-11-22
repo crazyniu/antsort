@@ -21,7 +21,7 @@ export interface Spec {
 export const SPECS: Spec[] = [
   // 现在只有试玩用的两关（给用户看效果）；正式的前 50 关按 docs/01 第 2.1 节的排布表做
   // 1：怎么点都能过
-  { id: 1, layers: ['melon'], tracks: 2, car: [20, 120], maxCars: 5, mechanics: [], target: { random: [1, 1], safe: [1, 1] } },
+  { id: 1, layers: ['chick'], tracks: 2, car: [30, 160], maxCars: 6, mechanics: [], target: { random: [1, 1], safe: [1, 1] } },
   // 2：大一点的画，开始有「叫早了白占位子」
-  { id: 2, layers: ['shortcake'], tracks: 3, car: [12, 70], mechanics: [], target: { random: [0.6, 0.9], safe: [1, 1] } },
+  { id: 2, layers: ['kitten'], tracks: 3, car: [20, 110], mechanics: [], target: { random: [0.6, 0.9], safe: [1, 1] } },
 ];

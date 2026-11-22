@@ -1,4 +1,4 @@
-// 像素画（docs/01 第 1.2、1.3、3 节）：把拼豆画摆出来，一格一颗带圆凸点的积木豆（kit/stud 染色 + kit/stud_hi 高光），紧挨着排；
+// 像素画（docs/01 第 1.2、1.3、3 节）：把拼豆画摆出来，一格一颗鲜艳的正方体宝石（kit/gem 染色 + kit/gem_hi 高光），紧挨着排；
 // 搬走的格子露出背景。
 // 只管画，不管规则：能不能搬、搬哪颗都由 core/dig/rules.ts 算，局内页面按事件调 dig()。
 // 这里自己留一份「画面上的豆」：规则是当场算完的，画面慢慢播，两边不同步。
@@ -10,8 +10,8 @@ import { at, box, hex, img, size } from '../ui/kit';
 
 /** 一格最大多大（设计单位）：小画也不放得太大 */
 const CELL_MAX = 24;
-/** 豆的图（kit/stud，宽 / 高 0.947）比一格高出多少：下面那一点垂到下一行，被下一行盖住 */
-const SIDE = 1 / 0.947 - 1;
+/** 宝石的图（kit/gem，宽 / 高 0.841）比一格高出多少：下面那一截是前面的侧面，垂到下一行，被下一行盖住 */
+const SIDE = 1 / 0.841 - 1;
 /** 摞着的豆往上抬多少格 */
 const LIFT = 0.22;
 
@@ -70,9 +70,9 @@ export class Board {
     // 从上到下一行行放：下面一行盖住上面一行垂下来的侧面；豆的面比一格矮，每颗下面都露一条侧面
     for (let p = 0; p < n; p++) {
       const at0 = this.pos(p);
-      const bead = img(this.beadL, 'kit/stud', C, C * (1 + SIDE), 'bead');
+      const bead = img(this.beadL, 'kit/gem', C, C * (1 + SIDE), 'bead');
       // 高光：不染色，和豆同步（染色是乘法，白高光会被染掉，所以另叠一张）
-      const gl = img(this.glossL, 'kit/stud_hi', C, C * (1 + SIDE), 'gl');
+      const gl = img(this.glossL, 'kit/gem_hi', C, C * (1 + SIDE), 'gl');
       this.beads.push(bead);
       this.gloss.push(gl);
       this.render(p);

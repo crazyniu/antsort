@@ -54,18 +54,25 @@ const FEVER = [
 ];
 const PRAISE_TAG = 9202;
 /** 技能键多大、间隔多少 */
-const SKILL_S = 104;
-const SKILL_GAP = 28;
+const SKILL_S = 120;
+const SKILL_GAP = 22;
 const BADGE_W = 42;
 const BADGE_H = 36;
 /** 背景：一整片浅灰紫（用户给的，docs/01 第 3 节），中间略亮一点 */
 const BG = new Color(197, 200, 219, 255);
-/** 走道：铁轨下沿和托盘之间一条窄的浅色带 */
-const WALK_H = 40;
-const WALK = new Color(255, 255, 255, 70);
-/** 天桥显示多宽多高（kit/bridge 宽 / 高 0.342，横向放宽一点）、离屏幕两边多远 */
-const BRIDGE_W = 84;
-const BRIDGE_IN = 62;
+/** 走道：铁轨下沿和托盘之间一条米色的站台（上下一道深一点的边），铁轨垫在一条浅一点的路基上，照效果图 */
+const WALK_H = 80;
+const WALK = new Color(247, 234, 212, 255);
+const WALK_EDGE = new Color(222, 200, 172, 255);
+const RAILBED = new Color(226, 220, 226, 255);
+/** 拱桥（kit/arch，宽 / 高 0.656，照效果图 H 重画的）：楼梯从站台爬上去、拱门让火车穿过；左边原图，右边左右翻转。
+ * 图上的几个位置（按宽、高的比例，从左下角量）：楼梯脚、桥顶那一头、拱脚（铁轨从这里穿过） */
+const ARCH_K = 0.656;
+const ARCH_BASE = [0.2, 0.06];
+const ARCH_TOP = [0.76, 0.9];
+const ARCH_FOOT = 0.44;
+/** 桥离屏幕边多远 */
+const ARCH_IN = 6;
 /** 画和四周看不见的那一圈隔多远（小人在这一圈上绕）、那一圈的圆角 */
 const PIC_GAP = 30;
 const RING_R = 40;
@@ -308,7 +315,7 @@ export class GamePage extends Page {
     // 不放进度条：画搬了多少一眼看得到
     const hudY = Screen.cap ? Screen.headY : Screen.top - (Screen.notchTop > 0 ? 33 + 8 : 52);
     const levelName = this.arg.daily ? tr('UI_TAB_DAILY') : tr('UI_LEVEL', this.arg.level);
-    const keyS = Screen.cap ? 76 : 74;
+    const keyS = Screen.cap ? 76 : 84;
     const h = Screen.cap ? Screen.headH : 66;
     const gearX = -Screen.W / 2 + 24 + keyS / 2;
     at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', keyS, () => Flow.pause(this)), gearX, hudY);
@@ -341,7 +348,7 @@ export class GamePage extends Page {
     const trayTop = this.stationY + Station.padHeight() / 2;
     const walkY = trayTop + 4 + WALK_H / 2;
     // 车轮底下那条线
-    const railY = walkY + WALK_H / 2 + 6;
+    const railY = walkY + WALK_H / 2 + 4;
     // 小人站在车厢后沿放豆的那条线 = 画四周那一圈的下沿
     const dropY = railY + DROP_UP;
 
@@ -372,11 +379,18 @@ export class GamePage extends Page {
     this.feverRays = img(this.under, 'kit/fx_rays', raysS, raysS, 'rays');
     opacity(this.feverRays).opacity = 0;
 
+    // ---- 拱桥的位置：楼梯脚落在站台上，拱脚对着铁轨（火车从拱门里穿过）
+    const archBot = walkY - WALK_H / 2 + 6;
+    const archH = (railY - archBot) / ARCH_FOOT;
+    const archW = archH * ARCH_K;
+    const archL = -Screen.W / 2 + ARCH_IN;
+    const leftBase = new Vec3(archL + archW * ARCH_BASE[0], archBot + archH * ARCH_BASE[1], 0);
+    const leftTop = new Vec3(archL + archW * ARCH_TOP[0], archBot + archH * ARCH_TOP[1], 0);
+    const bridgeX = -leftTop.x;
     // ---- 拼豆画：车厢后沿以上、顶栏以下的空地正中，直接摆在背景上；四周留出小人绕圈走的地方
-    const bridgeX = Screen.W / 2 - BRIDGE_IN;
     const picBottom = dropY + Train.height - DROP_UP + 26;
     const picTop = hudY - h / 2 - 28;
-    const maxW = Screen.W - 2 * (BRIDGE_IN + 20);
+    const maxW = Screen.W - 2 * (ARCH_IN + archW * 0.5);
     const maxH = Math.max(120, picTop - picBottom - 2 * PIC_GAP);
     const holder = box('fieldHolder', this.stage, maxW, maxH);
     this.board = new Board(holder, maxW, maxH, this.lv);
@@ -384,7 +398,7 @@ export class GamePage extends Page {
     at(holder, 0, by);
     this.boardAt.set(0, by, 0);
     at(this.feverRays, 0, by);
-    // 那一圈：左右到天桥那一列（小人过了桥就在圈上），下沿是车厢后沿，上沿在画上面一点
+    // 那一圈：左右到桥顶那一列（小人下了桥就在圈上），下沿是车厢后沿，上沿在画上面一点
     this.field = {
       l: -bridgeX,
       r: bridgeX,
@@ -394,8 +408,10 @@ export class GamePage extends Page {
       carPos: (car) => car.node.position,
       exitY: trayTop - 6,
       walkY,
-      bridges: [-bridgeX, bridgeX],
-      landY: railY + Train.height + 6,
+      bridges: [
+        { base: leftBase, top: leftTop },
+        { base: new Vec3(-leftBase.x, leftBase.y, 0), top: new Vec3(-leftTop.x, leftTop.y, 0) },
+      ],
     };
     this.fieldTop = picTop;
     this.fieldBottom = picBottom;
@@ -403,9 +419,9 @@ export class GamePage extends Page {
     // ---- 走道
     const ground = box('ground', this.under);
     ground.setSiblingIndex(0);
-    const walk = tint(ground, Screen.W, WALK_H, WALK, 'walk');
-    at(walk, 0, walkY);
-    opacity(walk).opacity = WALK.a;
+    at(tint(ground, Screen.W, 34, RAILBED, 'railbed'), 0, railY + 8);
+    at(tint(ground, Screen.W, WALK_H + 6, WALK_EDGE, 'walkEdge'), 0, walkY);
+    at(tint(ground, Screen.W, WALK_H, WALK, 'walk'), 0, walkY);
 
     // ---- 铁轨、火车、两座天桥（桥盖在火车上面，火车从桥下钻过去）
     const cfg = App.config.ui.dig;
@@ -425,12 +441,11 @@ export class GamePage extends Page {
       this.lastDropSfx = this.vnow;
       sfx('bowl', 0, 0.3);
     });
-    // 桥从走道下沿一直伸到火车后面（盖过车头），小人下了桥就站在车厢后沿那条线上
-    const bridgeBot = walkY - WALK_H / 2 - 6;
-    const bridgeTopY = railY + Train.height + 24;
-    const bridgeH = bridgeTopY - bridgeBot;
-    const bridgeY = (bridgeTopY + bridgeBot) / 2;
-    for (const sx of [-1, 1]) at(img(rail, 'kit/bridge', BRIDGE_W, bridgeH, 'bridge'), sx * bridgeX, bridgeY);
+    for (const sx of [-1, 1]) {
+      const arch = img(rail, 'kit/arch', archW, archH, 'arch');
+      at(arch, sx * (archL + archW / 2), archBot + archH / 2);
+      arch.setScale(sx, 1, 1);
+    }
     // ---- 上场位、排队区、已经在场上的方块（复活后重画）
     this.station = new Station(
       this.stage,
@@ -495,10 +510,10 @@ export class GamePage extends Page {
     const S = SKILL_S;
     const node = img(this.stage, 'skin/f_skill', S, S, id);
     at(node, x, y);
-    const icon = img(node, `icon/skill_${id}`, 76, 76, 'icon');
-    at(icon, 0, 11);
-    const name = text(node, skillName(id), 22);
-    at(name.node, 0, -37);
+    const icon = img(node, `icon/skill_${id}`, Math.round(S * 0.72), Math.round(S * 0.72), 'icon');
+    at(icon, 0, Math.round(S * 0.11));
+    const name = text(node, skillName(id), 24);
+    at(name.node, 0, -Math.round(S * 0.36));
     fit(name, S - 8, 22, 15);
     const badge = slice(node, 'kit/tag_red', BADGE_W, BADGE_H, 'badge');
     at(badge, S / 2 - BADGE_W / 2 + 8, S / 2 - 10);
@@ -507,9 +522,9 @@ export class GamePage extends Page {
     const plus = keyButton(node, 'green', 'kit/ic_plus', 42, null, 0.56);
     at(plus, S / 2 - 12, S / 2 - 10);
     const lock = box('lock', node, S, S);
-    at(img(lock, 'kit/ic_lock', 38, 38, 'icon'), 0, 12);
+    at(img(lock, 'kit/ic_lock', 44, 44, 'icon'), 0, Math.round(S * 0.12));
     const lockLabel = text(lock, tr('H_ENTRY_LOCKED', Skills.unlockLevel(App.config.eco, id)), 20);
-    at(lockLabel.node, 0, -37);
+    at(lockLabel.node, 0, -Math.round(S * 0.36));
     fit(lockLabel, S - 8, 22, 14);
     onTap(node, () => Flow.useSkill(this, id));
     this.skillNodes.set(id, { node, icon, count, lock, plus, name: name.node, badge });
@@ -822,7 +837,7 @@ export class GamePage extends Page {
     this.shownCarried++;
     sfx('bo', 0, 0.45);
     const d = train.reserve(c);
-    const node = img(this.fly, 'kit/bead', 26, 32, 'flyBead');
+    const node = img(this.fly, 'kit/gem', 26, 31, 'flyBead');
     (node.getComponent(Sprite) as Sprite).color = this.board.colors[c];
     at(node, pos.x, pos.y);
     const f = { d, c, node, arrived: false };
@@ -1250,7 +1265,7 @@ export class GamePage extends Page {
   /** 顶栏的关卡号：难关、超难关描边换色，右边挂同色小牌子 */
   private levelTitle(levelName: string, hudY: number, midX: (w: number) => number, timed: boolean): void {
     const kind = this.arg.daily ? 'normal' : levelKind(this.arg.level);
-    const lv = text(this.stage, levelName, 30, kind === 'normal' ? {} : { outline: KIND_STYLE[kind].outline });
+    const lv = text(this.stage, levelName, 44, kind === 'normal' ? {} : { outline: KIND_STYLE[kind].outline });
     const tw = textWidth(lv);
     this.kindTagNode = null;
     if (kind === 'normal') {

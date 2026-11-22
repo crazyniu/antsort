@@ -8,7 +8,7 @@ import * as fx from '../ui/fx';
 import { COLOR, at, box, img, onTap, opacity, text } from '../ui/kit';
 
 /** 方块的显示尺寸（kit/box，宽 / 高 1.136） */
-export const CAR_W = 100;
+export const CAR_W = 116;
 export const CAR_H = Math.round(CAR_W / 1.136);
 /** 托盘：多高、一格最宽多宽、方块在格子里缩到格宽的多少、四个角多圆 */
 const TRAY_H = 112;
@@ -23,14 +23,12 @@ const TRAY_LINE = new Color(255, 255, 255, 150);
 const WARN_RED = new Color(255, 120, 120, 120);
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */
 const QUEUE_K = 1;
-const ROW_H = 96;
+const ROW_H = 112;
 export const TRACK_ROWS = 3;
-const COL_GAP = 128;
+const COL_GAP = 150;
 const BUMP_TAG = 9301;
 /** 后排的方块压暗到多少（只压一点：压多了颜色发灰；前后排主要靠白边分） */
 const DIM = 0.9;
-/** 很浅的方块上数字的颜色 */
-const PALE_INK = new Color(110, 84, 80, 255);
 
 export interface CarView {
   node: Node;
@@ -151,7 +149,7 @@ export class Station {
 
   /** 方块在托盘里缩到多大 */
   carScale(): number {
-    return Math.min(1, (this.placeW() * SEAT_W) / CAR_W);
+    return (this.placeW() * SEAT_W) / CAR_W;
   }
 
   /** 第 i 个上场位上方块的位置 */
@@ -256,12 +254,8 @@ export class Station {
     const body = img(node, 'kit/box', CAR_W, CAR_H, 'body');
     // 高光（不染色，染色是乘法，白高光会被染掉）
     img(node, 'kit/box_hi', CAR_W, CAR_H, 'gloss');
-    // 白色、米色这些很浅的方块：数字用深色，不描边（白字看不清）
-    const base = this.colors[c] ?? Color.WHITE;
-    const pale = base.r * 0.3 + base.g * 0.59 + base.b * 0.11 > 222;
-    const label = pale
-      ? text(null, String(left), 50, { color: PALE_INK, outline: null, shadow: false })
-      : text(null, String(left), 50, { color: COLOR.white, outline: this.inkOf(c), outlineWidth: 4 });
+    // 数字一律白字、粗描边（描边是方块颜色深一档；很浅的方块描边再深一点，白字才看得清），照效果图
+    const label = text(null, String(left), 60, { color: COLOR.white, outline: this.inkOf(c), outlineWidth: 5 });
     node.addChild(label.node);
     at(label.node, 0, -6);
     const wait = box('wait', node, 34, 34);
@@ -283,7 +277,9 @@ export class Station {
   private inkOf(c: number): Color {
     const base = this.colors[c] ?? Color.WHITE;
     const lum = (base.r * 0.3 + base.g * 0.59 + base.b * 0.11) / 255;
-    const k = lum > 0.8 ? 0.42 : lum < 0.3 ? 0.5 : 0.52;
+    // 奶油白、蜜桃粉这些很浅的：描边用玫瑰棕（按比例压暗会发灰发绿）
+    if (lum > 0.8) return new Color(158, 100, 92, 255);
+    const k = lum < 0.3 ? 0.5 : 0.55;
     return new Color(Math.round(base.r * k), Math.round(base.g * k), Math.round(base.b * k), 255);
   }
 

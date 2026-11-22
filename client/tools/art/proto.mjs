@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// 代码画的图（SVG，按 3 倍渲染）：拼豆、小人抱着的豆、小队方块、加速键的图标、铁轨、三个技能图标。小人、火车、小船、花草是 Codex 画的，由 tools/art/sprites.py 切出来。
-// 白色的图（bead、block_body）局内按颜色染色：白 → 那个颜色，灰 → 深一档。
+// 代码画的图（SVG，按 3 倍渲染）：最前排方块的白边、加速键的图标、四个技能图标。宝石、方块、小人、火车、铁轨、拱桥是 Codex 画的，由 tools/art/sprites.py 切出来。
 // 用法：node tools/art/proto.mjs，然后 ./run.sh art-compress（量化 + 补 .meta）
 import { Resvg } from '@resvg/resvg-js';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -20,58 +19,9 @@ function out(path, w, h, body) {
   console.log(`✓ ${path}.png ${w * RES}×${h * RES}`);
 }
 
-// ---- 拼豆（显示 40 × 50）：带厚度的小方块，照效果图的样子：圆角的面只占一格的八成多（33），下面永远露一条深一档的侧面，
-// 整幅画是一颗颗凸起来的。面是纯白（染出来就是色板上那个颜色，不压暗）。面的圆角外面垫着同色深一档的底，
-// 相邻的豆之间看到的缝是这个颜色深一点的样子，不会透出下面的草地。局内整张染色：白 → 豆的颜色，灰 → 深一档
-out(
-  'kit/bead',
-  40,
-  50,
-  `<rect x="0" y="0" width="40" height="24" fill="#cdcdcd"/>
-   <rect x="0" y="8" width="40" height="42" rx="6" fill="#bababa"/>
-   <rect x="0.8" y="0.8" width="38.4" height="32.4" rx="7.5" fill="#ffffff"/>`,
-);
 
-// ---- 拼豆的高光片（显示 40 × 50，不染色，叠在豆上面）：面的上半截一片柔光、左上角一小条高光、侧面下沿压暗一点。
-// 豆本体是整张染色的（乘法染色提不亮），光泽只能用这张不染色的叠出来；柔光不能重，重了颜色发白
-out(
-  'kit/bead_top',
-  40,
-  50,
-  `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.34"/><stop offset="0.62" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-   <rect x="0.8" y="0.8" width="38.4" height="32.4" rx="7.5" fill="url(#g)"/>
-   <rect x="5.5" y="4.5" width="10" height="4.5" rx="2.25" fill="#fff" fill-opacity="0.6"/>
-   <rect x="0" y="40" width="40" height="10" rx="5" fill="#000" fill-opacity="0.06"/>`,
-);
 
-// ---- 小人抱着的豆（显示 40 × 44）：斜着看的小方块，看得到上面和两个侧面，外面一圈深色的边（小人的衣服和豆一个颜色，没有边分不出来）；整张染色
-out(
-  'kit/cube',
-  40,
-  44,
-  `<path d="M20 2 L38 11 L38 32 L20 42 L2 32 L2 11 Z" fill="#8a8a8a" stroke="#8a8a8a" stroke-width="4" stroke-linejoin="round"/>
-   <g stroke-linejoin="round" stroke-width="1">
-   <path d="M2 11 L20 21 L20 42 L2 32 Z" fill="#d6d6d6" stroke="#d6d6d6"/>
-   <path d="M20 21 L38 11 L38 32 L20 42 Z" fill="#b0b0b0" stroke="#b0b0b0"/>
-   <path d="M20 2 L38 11 L20 21 L2 11 Z" fill="#ffffff" stroke="#ffffff"/></g>`,
-);
 
-// ---- 小队方块（显示 100 × 84）：圆角方块，下面压一道厚的深边（比例照效果图：扁一点、底边厚）；整张染色
-out(
-  'kit/block_body',
-  100,
-  84,
-  `<rect x="0" y="16" width="100" height="68" rx="20" fill="#b0b0b0"/>
-   <rect x="0" y="0" width="100" height="68" rx="20" fill="#fff"/>`,
-);
-// 方块面上的高光（不染色，叠在方块上）：上半截一片柔光
-out(
-  'kit/block_top',
-  100,
-  84,
-  `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
-   <rect x="5" y="4" width="90" height="30" rx="15" fill="url(#g)"/>`,
-);
 // 最前排的白边
 out(
   'kit/block_rim',
@@ -86,14 +36,6 @@ const ff = (dx, dy, fill, op) =>
    <path d="M9 16 L29 32 L9 48 Z"/><path d="M35 16 L55 32 L35 48 Z"/></g>`;
 out('kit/ic_speed', 64, 64, `${ff(0, 3, '#0b2c66', 0.28)}${ff(0, 0, '#ffffff', 1)}`);
 
-// ---- 铁轨（显示 60 × 18，横着平铺）
-out(
-  'kit/track',
-  60,
-  18,
-  `<rect x="4" y="7" width="12" height="11" rx="2" fill="#8a5a2c"/><rect x="24" y="7" width="12" height="11" rx="2" fill="#8a5a2c"/><rect x="44" y="7" width="12" height="11" rx="2" fill="#8a5a2c"/>
-   <rect x="0" y="2" width="60" height="6" fill="#aab3c2"/><rect x="0" y="6" width="60" height="2" fill="#7f8898"/>`,
-);
 // ---- 技能图标（显示 128 × 128）
 const plate = (c1, c2) =>
   `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;

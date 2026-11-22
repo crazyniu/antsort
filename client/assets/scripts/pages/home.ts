@@ -486,17 +486,20 @@ export class HomePage extends Page {
     fx.bob(holder, 5, 3);
     // 小火车：一节车厢 + 车头，停在画下面；两个小人站在旁边
     const y = -205;
-    for (let x = -150; x <= 150; x += 60) at(img(root, 'kit/track', 60, 18, 'track'), x, y + 3);
-    const wagon = box('wagon', root, 96, 72);
-    at(wagon, -66, y + 33);
-    img(wagon, 'kit/wagon_back', 105, 66, 'back');
-    lv.palette.slice(0, 4).forEach((c, i) => {
-      const cube = img(wagon, 'kit/bead', 20, 25, 'cube');
+    for (let x = -160; x <= 160; x += 79) at(img(root, 'kit/rail', 80, 13, 'rail'), x, y + 3);
+    // 一节车厢（白图染成画里第一种颜色）+ 车头，车厢里码几颗宝石
+    const wagon = box('wagon', root, 112, 62);
+    at(wagon, -62, y + 31);
+    const tintC = hex(lv.palette[0]);
+    (img(wagon, 'kit/wagon_body', 112, 62, 'body').getComponent(Sprite) as Sprite).color = tintC;
+    lv.palette.slice(0, 5).forEach((c, i) => {
+      const cube = img(wagon, 'kit/gem', 18, 21, 'cube');
       (cube.getComponent(Sprite) as Sprite).color = hex(c);
-      at(cube, (i - 1.5) * 21, 12);
+      at(cube, (i - 2) * 19, 10);
     });
-    img(wagon, 'kit/wagon_front', 105, 66, 'front');
-    at(img(root, 'kit/loco', 130, 96, 'loco'), 54, y + 46);
+    (img(wagon, 'kit/wagon_front', 112, 62, 'front').getComponent(Sprite) as Sprite).color = tintC;
+    img(wagon, 'kit/wagon_wheels', 112, 62, 'wheels');
+    at(img(root, 'kit/loco', 112, 89, 'loco'), 58, y + 42);
     lv.palette.slice(0, 2).forEach((c, i) => {
       const w = box('worker', root, 40, 48);
       at(w, i === 0 ? -152 : 152, y + 26);

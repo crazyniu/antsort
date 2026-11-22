@@ -5,16 +5,16 @@ import { Color, Node, Sprite, Tween, Vec3, tween } from 'cc';
 import { at, box, img, opacity } from '../ui/kit';
 
 /** 车头、车厢显示多大（kit/loco、kit/wagon_*，client/tools/art/sprites.py 的 v3 切出来的，宽高比照图） */
-const LOCO_H = 108;
+const LOCO_H = 122;
 const LOCO_W = Math.round(LOCO_H * 1.259);
-const WAGON_H = 76;
+const WAGON_H = 86;
 const WAGON_W = Math.round(WAGON_H * 1.804);
 /** 车厢之间、车厢和车头之间的缝 */
 const GAP = 2;
 /** 车厢里一排放几颗小方块、每颗多大、一排比一排高多少 */
 const COLS = 6;
-const CUBE = 17;
-const ROW_LIFT = 8;
+const CUBE = 19;
+const ROW_LIFT = 9;
 /** 铁轨一段显示多高（kit/rail 宽 / 高 6.14） */
 const RAIL_H = 26;
 const RAIL_W = Math.round(RAIL_H * 6.14);
@@ -308,7 +308,7 @@ export class Train {
     if (w && this.cur === d.train) {
       const col = d.index % COLS;
       const row = Math.floor(d.index / COLS);
-      const cube = img(w.cubes, 'kit/stud', CUBE, CUBE * 1.056, 'cube');
+      const cube = img(w.cubes, 'kit/gem', CUBE, CUBE * 1.19, 'cube');
       (cube.getComponent(Sprite) as Sprite).color = this.colors[color] ?? Color.WHITE;
       const x = (col - (COLS - 1) / 2) * (CUBE + 1);
       // 第一排大半截藏在前挡板后面，往上一排排码到斗口

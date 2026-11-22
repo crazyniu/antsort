@@ -5,16 +5,16 @@
 // 出发的先后要守住一条：一颗豆要等它面前那条路上的豆都被搬走了才能去搬（不然看着像是从里面掏的）。只卡这一条，
 // 不按「一队搬完下一队才动」排：几支小队只要各自的豆露出来了就同时干活，画面才热闹。
 // 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、双手伸在身前抱东西一套（kit/wk_*，tools/art/sprites.py 切的）。
-// 抱着的豆（kit/cube）画在「身前」：往两边走在手那一侧，往下走在胸前（盖住身子），往上走在头顶后面（俯视的画面里，身前就是画面上方，被头挡住一半）。
+// 抱着的宝石（kit/gem）画在「身前」：往两边走在手那一侧，往下走在胸前（盖住身子），往上走在头顶后面（俯视的画面里，身前就是画面上方，被头挡住一半）。
 import { Color, Node, Sprite, SpriteFrame, Vec3 } from 'cc';
 import { at, box, img, size } from '../ui/kit';
 import { frame } from '../ui/res';
 import type { CarView } from './station';
 import type { Drop, Train } from './train';
 
-/** 小人显示多高、抱着的豆多宽（kit/cube 宽 40 高 44） */
-const H = 46;
-const CUBE = 23;
+/** 小人显示多高、抱着的宝石多宽（kit/gem 宽 / 高 0.841） */
+const H = 60;
+const CUBE = 28;
 /** 赶下一列火车时最多放慢到几成速度（再慢就看得出来了） */
 const MIN_PACE = 0.5;
 /** 空着手走回方块的速度（比平时快一点，路上不堆人） */
@@ -48,9 +48,8 @@ export interface Field {
   /** 小人从方块的哪个高度走出来（托盘上沿）、走道的中线 */
   exitY: number;
   walkY: number;
-  /** 两座天桥的 x（桥从走道一直通到火车后面）；下了桥落在哪个高度（再往前走几步就到那一圈的下沿） */
-  bridges: number[];
-  landY: number;
+  /** 两座天桥：楼梯脚（在站台上）和桥顶（火车后面那一头，下来就是那一圈的下沿） */
+  bridges: { base: Vec3; top: Vec3 }[];
 }
 
 interface Walker {
@@ -236,11 +235,11 @@ export class Crew {
     return out;
   }
 
-  /** 离 x 最近的那座桥 */
-  private bridgeFor(x: number): number {
+  /** 离 x 最近的那座桥（按桥顶那一头算） */
+  private bridgeFor(x: number): { base: Vec3; top: Vec3 } {
     const bs = this.field.bridges;
-    let best = bs[0] ?? 0;
-    for (const b of bs) if (Math.abs(b - x) < Math.abs(best - x)) best = b;
+    let best = bs[0];
+    for (const b of bs) if (Math.abs(b.top.x - x) < Math.abs(best.top.x - x)) best = b;
     return best;
   }
 
@@ -258,9 +257,9 @@ export class Crew {
     } else {
       const c = f.carPos(job.car);
       // 走哪座桥按要去的豆在画的哪一边挑（不按方块在哪）：两座桥分着走，不挤在一座上
-      const bx = this.bridgeFor(job.inside[0].x);
-      start = new Vec3(bx, f.b, 0);
-      pts.push(new Vec3(c.x, f.exitY, 0), new Vec3(c.x, f.walkY, 0), new Vec3(bx, f.walkY, 0), new Vec3(bx, f.landY, 0), start);
+      const br = this.bridgeFor(job.inside[0].x);
+      start = new Vec3(br.top.x, f.b, 0);
+      pts.push(new Vec3(c.x, f.exitY, 0), new Vec3(c.x, f.walkY, 0), new Vec3(br.base.x, f.walkY, 0), br.base.clone(), br.top.clone(), start);
     }
     pts.push(...this.ring(start, job.inside[0]));
     for (let i = 1; i < job.inside.length; i++) pts.push(job.inside[i]);
@@ -281,12 +280,13 @@ export class Crew {
   /** 空着手走回方块：沿下沿走到近的桥 → 过桥 → 走道 → 走进方块 */
   private routeHome(w: Walker): Vec3[] {
     const f = this.field;
-    const bx = this.bridgeFor(w.x);
+    const br = this.bridgeFor(w.x);
     return [
       new Vec3(w.x, f.b, 0),
-      new Vec3(bx, f.b, 0),
-      new Vec3(bx, f.landY, 0),
-      new Vec3(bx, f.walkY, 0),
+      new Vec3(br.top.x, f.b, 0),
+      br.top.clone(),
+      br.base.clone(),
+      new Vec3(br.base.x, f.walkY, 0),
       new Vec3(w.home.x, f.walkY, 0),
       new Vec3(w.home.x, f.exitY, 0),
       new Vec3(w.home.x, w.home.y, 0),
@@ -508,8 +508,8 @@ export class Crew {
       w = {
         body: img(this.bodyL, 'kit/wk_b_0b', undefined, H, 'w'),
         top: img(this.topL, 'kit/wk_b_0t', undefined, H, 'w'),
-        cube: img(this.cubeL, 'kit/cube', CUBE, CUBE * 1.1, 'c'),
-        cubeB: img(this.cubeBackL, 'kit/cube', CUBE, CUBE * 1.1, 'c'),
+        cube: img(this.cubeL, 'kit/gem', CUBE, CUBE * 1.19, 'c'),
+        cubeB: img(this.cubeBackL, 'kit/gem', CUBE, CUBE * 1.19, 'c'),
         carry: false,
         job,
         pts,

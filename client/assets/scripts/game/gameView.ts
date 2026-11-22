@@ -340,16 +340,14 @@ export class GamePage extends Page {
       at(this.clockCap.node, midX(cw), hudY);
     }
 
-    // ---- 技能栏：贴着底部安全区。没解锁的不显示（图标也不露），解锁那一关才第一次出现
+    // ---- 技能栏：贴着底部安全区，第 1 关起就有，三个技能都摆出来；没解锁的灰着、带锁和「第 N 关解锁」
     const skillY = Screen.bottom + (Screen.safeBottom > 0 ? 10 : 26) + SKILL_S / 2;
-    const skillLvl = this.arg.daily ? App.save.data.level : Math.max(App.save.data.level, this.arg.level);
-    const ids = Skills.ids(eco).filter((sid) => Skills.isUnlocked(eco, sid, skillLvl));
+    const ids = Skills.ids(eco);
     ids.forEach((sid, i) => this.buildSkill(sid, (i - (ids.length - 1) / 2) * (SKILL_S + SKILL_GAP), skillY));
 
     // ---- 版式（玩法，docs/01 第 3 节）：从上到下 顶栏 → 铁轨和火车 → 拼豆画（四周一圈路）→ 小河（船 = 上场位）→ 河对岸的排队区 → 技能栏
     const railY = hudY - h / 2 - 118;
-    // 技能一个都还没解锁（前几关）：排队区往下挪，不留一条空的技能栏
-    const trackTop = skillY - SKILL_S / 2 + (ids.length > 0 ? SKILL_S + 26 : 54) + Station.trackHeight();
+    const trackTop = skillY - SKILL_S / 2 + SKILL_S + 26 + Station.trackHeight();
     const riverC = trackTop + 30 + RIVER_H / 2;
     this.stationY = riverC - 2;
     const riverTop = riverC + RIVER_H / 2;

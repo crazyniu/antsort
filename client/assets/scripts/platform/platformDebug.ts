@@ -31,6 +31,33 @@ export class PlatformDebug extends PlatformBase {
     if (cfg.languages?.app?.length) this.languages = cfg.languages.app;
     this.adsOn = this.hasAds;
     this.privacyUrl = cfg.privacyPolicy ?? '';
+    this.reloadOnResize();
+  }
+
+  /**
+   * 网页版：界面按启动时的屏幕尺寸排一次版（Screen.init），之后窗口变了（浏览器开发者工具切机型、拖窗口、横竖屏）
+   * 版面不会跟着重排，按钮会跑出屏幕。所以宽度变了、或高度变了一成五以上，就重新载入页面（地址栏参数不变）。
+   * 手机浏览器地址栏收起放下只动一点高度，不算
+   */
+  private reloadOnResize(): void {
+    const w = globalThis as unknown as {
+      innerWidth?: number;
+      innerHeight?: number;
+      addEventListener?: (type: string, fn: () => void) => void;
+      location?: { reload(): void };
+    };
+    if (!w.addEventListener || !w.location || !w.innerWidth || !w.innerHeight) return;
+    const w0 = w.innerWidth;
+    const h0 = w.innerHeight;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    w.addEventListener('resize', () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const dw = Math.abs((w.innerWidth ?? w0) - w0);
+        const dh = Math.abs((w.innerHeight ?? h0) - h0) / h0;
+        if (dw > 2 || dh > 0.15) w.location?.reload();
+      }, 400);
+    });
   }
 
   override openPrivacyPolicy(): void {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 代码画的图（SVG，按 3 倍渲染）：拼豆、小人抱着的豆、小队方块、铁轨、三个技能图标。小人、火车、小船、花草是 Codex 画的，由 tools/art/sprites.py 切出来。
+// 代码画的图（SVG，按 3 倍渲染）：拼豆、小人抱着的豆、小队方块、加速键的图标、铁轨、三个技能图标。小人、火车、小船、花草是 Codex 画的，由 tools/art/sprites.py 切出来。
 // 白色的图（bead、block_body）局内按颜色染色：白 → 那个颜色，灰 → 深一档。
 // 用法：node tools/art/proto.mjs，然后 ./run.sh art-compress（量化 + 补 .meta）
 import { Resvg } from '@resvg/resvg-js';
@@ -79,6 +79,12 @@ out(
   96,
   `<rect x="3" y="3" width="106" height="90" rx="25" fill="none" stroke="#fff" stroke-width="6"/>`,
 );
+
+// ---- 加速键上的图标（显示 64 × 64）：两个朝右的圆角三角（快进），白的，下面压一道淡淡的深色
+const ff = (dx, dy, fill, op) =>
+  `<g transform="translate(${dx},${dy})" fill="${fill}" fill-opacity="${op}" stroke="${fill}" stroke-opacity="${op}" stroke-width="7" stroke-linejoin="round">
+   <path d="M9 16 L29 32 L9 48 Z"/><path d="M35 16 L55 32 L35 48 Z"/></g>`;
+out('kit/ic_speed', 64, 64, `${ff(0, 3, '#0b2c66', 0.28)}${ff(0, 0, '#ffffff', 1)}`);
 
 // ---- 铁轨（显示 60 × 18，横着平铺）
 out(

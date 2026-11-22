@@ -15,7 +15,7 @@ import { App } from '../services/app';
 import { buzz, sfx } from '../services/audio';
 import * as fx from '../ui/fx';
 import { language, tr } from '../ui/i18n';
-import { artNumber, at, blockInput, box, Capsule, capsule, COLOR, fit, fxImg, iconButton, img, keyButton, onTap, opacity, recycleFx, resizeSlice, slice, text, textWidth, tint } from '../ui/kit';
+import { artNumber, at, blockInput, box, Btn, button, Capsule, capsule, COLOR, fit, fxImg, iconButton, img, keyButton, onTap, opacity, recycleFx, resizeSlice, slice, text, textWidth, tint } from '../ui/kit';
 import { Screen } from '../ui/screen';
 import { gameFrames, loadFrames } from '../ui/res';
 import { popupCount } from '../ui/popup';
@@ -148,8 +148,8 @@ export class GamePage extends Page {
   private lastDropSfx = 0;
   /** 画面上已经搬走了几颗（顶栏的进度） */
   private shownCarried = 0;
-  /** 倍速键的两个样子：[没开（蓝）, 开着（绿）] */
-  private speedKeys: Node[] = [];
+  /** 右上角的加速键 */
+  private speedKey: Btn | null = null;
   private skillNodes = new Map<string, { node: Node; icon: Node; count: Label; lock: Node; plus: Node; name: Node; badge: Node }>();
   private comboRow!: Node;
   private comboBadge!: Node;
@@ -322,9 +322,10 @@ export class GamePage extends Page {
     const h = Screen.cap ? Screen.headH : 66;
     const gearX = -Screen.W / 2 + 24 + keyS / 2;
     at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', keyS, () => Flow.pause(this)), gearX, hudY);
-    const speedX = (Screen.cap ? Screen.headRight : Screen.W / 2 - 24) - keyS / 2;
-    this.buildSpeedKey(speedX, hudY, keyS);
-    const rightEdge = speedX - keyS / 2 - 12;
+    const speedW = Math.round(keyS * 1.5);
+    const speedX = (Screen.cap ? Screen.headRight : Screen.W / 2 - 24) - speedW / 2;
+    this.buildSpeedKey(speedX, hudY, speedW, keyS);
+    const rightEdge = speedX - speedW / 2 - 12;
     const progressRight = gearX + keyS / 2;
     const midX = (w: number): number => Math.min(rightEdge - w / 2, Math.max(0, progressRight + 12 + w / 2));
     const timed = this.s.clock !== Infinity;
@@ -482,24 +483,28 @@ export class GamePage extends Page {
     this.refreshSkills();
   }
 
-  /** 倍速键：和设置键一样的方键，上面写 ×1 / ×2；开着倍速时是绿的 */
-  private buildSpeedKey(x: number, y: number, s: number): void {
-    this.speedKeys = (['blue', 'green'] as const).map((color) => {
-      const n = img(this.stage, `skin/f_key_${color}`, s, s, 'speed');
-      at(n, x, y);
-      const l = text(n, color === 'green' ? `×${App.config.ui.dig.speed}` : '×1', 30, { color: COLOR.white });
-      at(l.node, 0, s * 0.055);
-      onTap(n, () => {
+  /** 加速键：长方形的按钮，一个「快进」图标 + 现在是几倍（1 / 2）；开着加速时是绿的 */
+  private buildSpeedKey(x: number, y: number, w: number, h: number): void {
+    this.speedKey = button(this.stage, {
+      color: 'blue',
+      w,
+      h,
+      icon: 'kit/ic_speed',
+      iconSize: Math.round(h * 0.5),
+      label: '1',
+      fontSize: Math.round(h * 0.46),
+      onTap: () => {
         fast = !fast;
         this.refreshSpeed();
-      }, { press: 0.92 });
-      return n;
+      },
     });
+    at(this.speedKey.node, x, y);
     this.refreshSpeed();
   }
 
   private refreshSpeed(): void {
-    this.speedKeys.forEach((n, i) => (n.active = (i === 1) === fast));
+    this.speedKey?.setColor(fast ? 'green' : 'blue');
+    this.speedKey?.setLabel(String(this.speed));
   }
 
   /** 草地上撒小摆设（草丛、小花、石子，角上放灌木）：那圈路里面画的四周、排队区沙地两边。位置按关卡号定，同一关每次都一样 */

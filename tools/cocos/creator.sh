@@ -27,6 +27,10 @@ cocos_build_once() {
   [ "${COCOS_KEEP_CACHE:-}" = "1" ] || rm -rf "$CLIENT/library" "$CLIENT/temp"
   # COCOS_BUILD_CONFIG：换一份构建参数（安卓要带本机的 SDK、NDK 路径，package.sh 生成一份不进仓库的）
   "$COCOS" --project "$CLIENT" --build "configPath=${COCOS_BUILD_CONFIG:-$CLIENT/build-config/$platform.json}" || code=$?
+  # 网页版的窗口标题换成游戏名（Cocos 模板默认是「Cocos Creator | 工程名」），取 game.json 里 App 默认语言的名字
+  if [ "$code" -eq 36 ] && [ "$platform" = web-mobile ] && [ -f "$CLIENT/build/web-mobile/index.html" ]; then
+    node -e 'const fs=require("fs");const g=require(process.argv[2]);const n=g.name[g.languages.app[0]]||g.codeName;const f=process.argv[1];fs.writeFileSync(f,fs.readFileSync(f,"utf8").replace(/<title>[^<]*<\/title>/,"<title>"+n+"</title>"))' "$CLIENT/build/web-mobile/index.html" "$CLIENT/../game.json" || true
+  fi
   return "$code"
 }
 

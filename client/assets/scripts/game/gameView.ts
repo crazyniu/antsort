@@ -341,9 +341,10 @@ export class GamePage extends Page {
     }
     if (!Screen.cap) at(iconButton(this.stage, 'kit/round_blue', 'kit/ic_gear', 74, () => Flow.pause(this)), Screen.W / 2 - 24 - 37, hudY);
 
-    // ---- 技能栏：贴着底部安全区
+    // ---- 技能栏：贴着底部安全区。没解锁的不显示（图标也不露），解锁那一关才第一次出现
     const skillY = Screen.bottom + (Screen.safeBottom > 0 ? 10 : 26) + SKILL_S / 2;
-    const ids = Skills.ids(eco);
+    const skillLvl = this.arg.daily ? App.save.data.level : Math.max(App.save.data.level, this.arg.level);
+    const ids = Skills.ids(eco).filter((sid) => Skills.isUnlocked(eco, sid, skillLvl));
     ids.forEach((sid, i) => this.buildSkill(sid, (i - (ids.length - 1) / 2) * (SKILL_S + SKILL_GAP), skillY));
 
     // ---- 版式（玩法，docs/01 第 3 节）：从上到下 顶栏 → 铁轨和火车 → 拼豆画（四周一圈路）→ 小河（船 = 上场位）→ 河对岸的排队区 → 技能栏

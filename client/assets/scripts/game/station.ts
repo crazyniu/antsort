@@ -1,4 +1,5 @@
 // 上场位和排队区（docs/01 第 1.2 节）：河里一排小船就是上场位（5 条 + 一条「＋」），河对岸几列排队的小队方块。
+// 空着的位子是一条敞着的木船；方块跳上去以后船上搭起这一队颜色的篷子，还差几颗大大地写在篷布上，船头插一面同色的小旗。
 // 只管画和点：点了方块调 onTapCar，规则在 core/dig/rules.ts，什么时候上场、搬豆、离场由局内页面按事件安排。
 // 代码里的名字沿用上一版：car = 小队方块，track = 排队区的一列，place = 上场位。
 import { Color, Label, Node, Sprite, Tween, Vec3, tween } from 'cc';
@@ -9,19 +10,33 @@ import { COLOR, at, box, img, onTap, opacity, size, text } from '../ui/kit';
 /** 方块的显示尺寸（kit/block_body） */
 export const CAR_W = 100;
 export const CAR_H = 92;
-/** 上场位（船）占的高度；船的图宽高比（kit/boat） */
+/** 上场位（船）占的高度；船的图高是宽的几倍（kit/boat 木船、kit/boat_roof 篷布，按同一个宽高显示，叠起来正好） */
 const PAD_H = 100;
-const BOAT_K = 198 / 339;
-/** 方块坐在船上，比船的中心高多少 */
-const SEAT = 14;
+const BOAT_K = 468 / 345;
+/** 篷布的中心比船图的中心高出船高的多少：上了场的小队就在篷布这里，小人从这里跳上岸 */
+const ROOF_UP = 0.1;
+/** 方块跳上船的路上缩到多大（落下就换成篷子） */
+const FLY_K = 0.6;
+/** 篷布上的数字缩到多大（方块上的字是 50 号） */
+const ROOF_TEXT_K = 0.88;
+/** 船头的小旗（kit/flag_pole 旗杆 + kit/flag 旗面，同一块画布）：显示多高、宽是高的几倍；旗的中心在篷布中心右边多少、船头（船图最上面）下面多少。
+ * 旗立在篷布外面：旗和篷布一个颜色，叠在一起分不清 */
+const FLAG_H = 50;
+const FLAG_K = 232 / 276;
+const FLAG_X = 15;
+const FLAG_DROP = 7;
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */
-const QUEUE_K = 0.82;
-const ROW_H = 80;
+const QUEUE_K = 0.9;
+const ROW_H = 88;
 export const TRACK_ROWS = 3;
-const COL_GAP = 150;
+const COL_GAP = 114;
 const BUMP_TAG = 9301;
-/** 后排的方块压暗到多少 */
-const DIM = 0.74;
+/** 后排的方块压暗到多少（只压一点：压多了颜色发灰；前后排主要靠白边分） */
+const DIM = 0.9;
+/** 「＋」那条船的篷布 */
+const PLUS_BLUE = new Color(84, 160, 255, 255);
+/** 告急时空船泛的红 */
+const WARN_RED = new Color(255, 150, 136, 255);
 
 export interface CarView {
   node: Node;
@@ -34,6 +49,8 @@ export interface CarView {
   label: Label;
   /** 「在等豆露出来」的小标记 */
   wait: Node;
+  /** 已经落在船上了（方块不见了，换成旗） */
+  seated: boolean;
   /** 上场的动画什么时候播完（局内页面的时间），之前不放小人 */
   readyAt: number;
   /** 规则里这一队已经搬完了：画面上数字到 0 就离场 */
@@ -74,6 +91,15 @@ export class Station {
     return PAD_H;
   }
 
+  /** 排队区 T 列一共占多宽（最左一列的左边到最右一列的右边） */
+  static trackSpan(T: number, width: number): number {
+    return (T - 1) * Station.colGap(T, width) + CAR_W * QUEUE_K;
+  }
+
+  private static colGap(T: number, width: number): number {
+    return Math.min(COL_GAP, (width - 220) / Math.max(1, T - 1));
+  }
+
   /** 按局面整个重画（开局、复活后） */
   build(s: GameState): void {
     const T = s.tracks.length;
@@ -105,15 +131,14 @@ export class Station {
       this.places[i] = car;
       const p = this.placePos(i);
       at(car.node, p.x, p.y);
-      car.node.setScale(this.carScale(), this.carScale(), 1);
       this.setFront(car, false, false);
+      this.seat(car, false);
       this.setWait(car, true);
     });
   }
 
   private trackX(t: number, T: number): number {
-    const gap = Math.min(COL_GAP, (this.width - 220) / Math.max(1, T - 1));
-    return (t - (T - 1) / 2) * gap;
+    return (t - (T - 1) / 2) * Station.colGap(T, this.width);
   }
 
   /** 第 t 列第 i 个的位置（0 = 最前面，在最上面，挨着上场位） */
@@ -130,40 +155,83 @@ export class Station {
     return Math.min(122, (this.width - 20) / Math.max(1, this.padCount()));
   }
 
-  /** 方块在船上缩到多大 */
-  carScale(): number {
-    return Math.min(1, (this.placeW() - 26) / CAR_W);
+  /** 船显示多宽、多高 */
+  private boatSize(): [number, number] {
+    const w = this.placeW() - 8;
+    return [w, w * BOAT_K];
   }
 
+  /** 第 i 个上场位上小队的位置：篷布的中心 */
   placePos(i: number): Vec3 {
-    const w = this.placeW();
-    return new Vec3((i - (this.padCount() - 1) / 2) * w, this.stationY + SEAT, 0);
+    return new Vec3((i - (this.padCount() - 1) / 2) * this.placeW(), this.stationY + this.boatSize()[1] * ROOF_UP, 0);
   }
 
-  /** 造一条船 */
+  /** 造一条船：木船，上面叠一张篷布（roof，有小队才显示） */
   private makeBoat(): Node {
-    const w = this.placeW() - 6;
-    return img(this.stage, 'kit/boat', w, w * BOAT_K, 'boat');
+    const [w, h] = this.boatSize();
+    const pad = img(this.stage, 'kit/boat', w, h, 'boat');
+    img(pad, 'kit/boat_roof', w, h, 'roof').active = false;
+    // 船垫在方块下面
+    pad.setSiblingIndex(0);
+    return pad;
+  }
+
+  /** 这条船搭不搭篷子；搭的话篷布什么颜色 */
+  private setRoof(pad: Node, color: Color | null): void {
+    const roof = pad.getChildByName('roof') as Node;
+    roof.active = !!color;
+    if (color) (roof.getComponent(Sprite) as Sprite).color = color;
+  }
+
+  /** 第 i 条船该是什么样：有小队落在上面 → 搭着小队颜色的篷子；空着 → 敞着的木船，告急时泛红 */
+  private paintBoat(i: number): void {
+    const pad = this.pads[i];
+    if (!pad) return;
+    const car = this.places[i];
+    this.setRoof(pad, car?.seated ? (this.colors[car.c] ?? Color.WHITE) : null);
+    (pad.getComponent(Sprite) as Sprite).color = this.warn && !car ? WARN_RED : Color.WHITE;
+  }
+
+  /** 方块落在船上：方块不见了，船上搭起它的颜色的篷子，数字写在篷布上，船头插一面同色的小旗 */
+  private seat(car: CarView, pop: boolean): void {
+    car.seated = true;
+    car.body.active = false;
+    car.rim.active = false;
+    const flag = box('flag', car.node, FLAG_H * FLAG_K, FLAG_H);
+    at(flag, FLAG_X, this.boatSize()[1] * (0.5 - ROOF_UP) - FLAG_DROP);
+    img(flag, 'kit/flag_pole', FLAG_H * FLAG_K, FLAG_H, 'pole');
+    (img(flag, 'kit/flag', FLAG_H * FLAG_K, FLAG_H, 'cloth').getComponent(Sprite) as Sprite).color = this.colors[car.c] ?? Color.WHITE;
+    // 旗在最下面，数字、等待标记盖在上面
+    flag.setSiblingIndex(0);
+    at(car.label.node, 0, 2);
+    car.label.node.setScale(ROOF_TEXT_K, ROOF_TEXT_K, 1);
+    at(car.wait, this.boatSize()[0] / 2 - 14, 30);
+    Tween.stopAllByTarget(car.node);
+    car.node.setScale(1, 1, 1);
+    const place = this.places.indexOf(car);
+    this.paintBoat(place);
+    if (pop) {
+      fx.popIn(flag, 0.05, 0.22);
+      if (this.pads[place]) fx.squash(this.pads[place], 1.08);
+    }
   }
 
   /** 上场位变成 count 条船：船重排，上面的方块跟着挪。加过位以后「＋」那条船变成真的位子 */
   setSlots(count: number, instant = false): void {
     if (!instant && count > this.places.length) this.plus = false;
     while (this.places.length < count) this.places.push(null);
-    const w = this.placeW();
     while (this.pads.length < count) {
       const pad = this.makeBoat();
-      // 船垫在方块下面
-      pad.setSiblingIndex(0);
       this.pads.push(pad);
       if (!instant) fx.popIn(pad, 0, 0.25);
     }
+    const [bw, bh] = this.boatSize();
     if (this.plus && !this.plusPad) {
+      // 「＋」那条船：搭着蓝篷子，篷布上一个「＋」，点它加位
       const pad = this.makeBoat();
-      pad.setSiblingIndex(0);
-      opacity(pad).opacity = 200;
-      const plus = text(pad, '+', 54, { color: COLOR.white, outline: new Color(60, 90, 140, 255), outlineWidth: 5 });
-      at(plus.node, 0, 10);
+      this.setRoof(pad, PLUS_BLUE);
+      const plus = text(pad, '+', 60, { color: COLOR.white, outline: new Color(40, 96, 190, 255), outlineWidth: 4 });
+      at(plus.node, 0, bh * ROOF_UP + 4);
       onTap(pad, () => this.onPlus());
       this.plusPad = pad;
     }
@@ -173,17 +241,17 @@ export class Station {
     }
     const all = this.plusPad ? [...this.pads, this.plusPad] : this.pads;
     all.forEach((pad, i) => {
-      size(pad, w - 6, (w - 6) * BOAT_K);
-      const p = this.placePos(i);
-      if (instant) at(pad, p.x, this.stationY);
-      else tween(pad).to(0.2, { position: new Vec3(p.x, this.stationY, 0) }, { easing: 'quadOut' }).start();
+      const x = this.placePos(i).x;
+      size(pad, bw, bh);
+      size(pad.getChildByName('roof') as Node, bw, bh);
+      if (instant) at(pad, x, this.stationY);
+      else tween(pad).to(0.2, { position: new Vec3(x, this.stationY, 0) }, { easing: 'quadOut' }).start();
     });
-    const k = this.carScale();
     this.places.forEach((car, i) => {
       if (!car) return;
       const p = this.placePos(i);
       Tween.stopAllByTarget(car.node);
-      tween(car.node).to(0.2, { position: p, scale: new Vec3(k, k, 1) }, { easing: 'quadOut' }).start();
+      tween(car.node).to(0.2, { position: p }, { easing: 'quadOut' }).start();
     });
   }
 
@@ -196,9 +264,7 @@ export class Station {
   setWarn(on: boolean): void {
     if (on === this.warn && !on) return;
     this.warn = on;
-    this.pads.forEach((pad, i) => {
-      (pad.getComponent(Sprite) as Sprite).color = on && !this.places[i] ? new Color(255, 150, 136, 255) : Color.WHITE;
-    });
+    this.pads.forEach((_, i) => this.paintBoat(i));
   }
 
   /** 上场位一起闪一下（满了还点） */
@@ -210,7 +276,7 @@ export class Station {
     const node = box('car', this.stage, CAR_W, CAR_H);
     const rim = img(node, 'kit/block_rim', CAR_W + 12, CAR_H + 12, 'rim');
     const body = img(node, 'kit/block_body', CAR_W, CAR_H, 'body');
-    const label = text(null, String(left), 50, { color: COLOR.white, outline: new Color(30, 34, 48, 255), outlineWidth: 5 });
+    const label = text(null, String(left), 50, { color: COLOR.white, outline: this.inkOf(c), outlineWidth: 4 });
     node.addChild(label.node);
     at(label.node, 0, 7);
     const wait = box('wait', node, 34, 34);
@@ -222,19 +288,27 @@ export class Station {
       at(dot, i * 9, 0);
     }
     wait.active = false;
-    const car: CarView = { node, body, rim, c, n, left, label, wait, readyAt: 0, done: false };
+    const car: CarView = { node, body, rim, c, n, left, label, wait, seated: false, readyAt: 0, done: false };
     this.setLeft(car, left);
     onTap(node, () => this.onTapCar(car), { sound: null, press: 0 });
     return car;
   }
 
-  /** 最前排：亮、有白边；后排：压暗、没有白边。onField = 已经在上场位上（亮、没有白边） */
+  /** 数字的描边：方块颜色的深一档（不用黑的，黑边压在亮色上显脏）；颜色太浅或太深的往中间靠一点，保证白字看得清 */
+  private inkOf(c: number): Color {
+    const base = this.colors[c] ?? Color.WHITE;
+    const lum = (base.r * 0.3 + base.g * 0.59 + base.b * 0.11) / 255;
+    const k = lum > 0.8 ? 0.42 : lum < 0.3 ? 0.5 : 0.52;
+    return new Color(Math.round(base.r * k), Math.round(base.g * k), Math.round(base.b * k), 255);
+  }
+
+  /** 最前排：亮、有白边；后排：压暗一点、没有白边。onField = 已经在上场位上（亮、没有白边） */
   private setFront(car: CarView, front: boolean, dim = !front): void {
     car.rim.active = front;
     const base = this.colors[car.c] ?? Color.WHITE;
     const k = dim ? DIM : 1;
     (car.body.getComponent(Sprite) as Sprite).color = new Color(Math.round(base.r * k), Math.round(base.g * k), Math.round(base.b * k), 255);
-    opacity(car.label.node).opacity = dim ? 170 : 255;
+    opacity(car.label.node).opacity = dim ? 205 : 255;
   }
 
   /** 这个方块在排队区的哪里：[列, 第几个]；不在排队区返回 null */
@@ -266,7 +340,7 @@ export class Station {
     this.setFront(car, false, false);
     // 跳过去的时候盖在别的方块上面
     car.node.setSiblingIndex(this.stage.children.length - 1);
-    const k = this.carScale();
+    const k = FLY_K;
     Tween.stopAllByTarget(car.node);
     const from = car.node.position.clone();
     const to = this.placePos(place);
@@ -274,7 +348,10 @@ export class Station {
     tween(car.node)
       .to(dur * 0.5, { position: top, scale: new Vec3(k * 1.1, k * 1.1, 1) }, { easing: 'quadOut' })
       .to(dur * 0.5, { position: to, scale: new Vec3(k, k, 1) }, { easing: 'quadIn' })
-      .call(() => this.bump(car))
+      .call(() => {
+        this.seat(car, true);
+        this.bump(car);
+      })
       .start();
     this.tracks[t].forEach((c, j) => {
       const was = c.node.active;
@@ -307,6 +384,8 @@ export class Station {
   leave(car: CarView): void {
     const place = this.places.indexOf(car);
     if (place >= 0) this.places[place] = null;
+    // 篷子收起来，变回空船
+    this.paintBoat(place);
     this.setWait(car, false);
     const node = car.node;
     Tween.stopAllByTarget(node);
@@ -323,7 +402,7 @@ export class Station {
   bump(car: CarView, amount = 0.07): void {
     const n = car.node;
     if (!n.isValid) return;
-    const k = this.places.includes(car) ? this.carScale() : QUEUE_K;
+    const k = this.places.includes(car) ? (car.seated ? 1 : FLY_K) : QUEUE_K;
     Tween.stopAllByTag(BUMP_TAG, n);
     n.setScale(k * (1 + amount), k * (1 - amount), 1);
     tween(n).tag(BUMP_TAG).to(0.14, { scale: new Vec3(k, k, 1) }, { easing: 'backOut' }).start();

@@ -8,11 +8,13 @@
              kit/wk_<姿势>_<帧>b（白衣帽，染色）和 kit/wk_<姿势>_<帧>t（脸、手、鞋，不染色）；
              姿势 f 正面（往下走）/ s 侧面（朝右）/ b 背面（往上走），举着豆的前面加 c（cf、cs、cb）
   train.png  车头、空车厢
-  boat.png   小船（上场位）、睡莲、芦苇、涟漪圈（2×2 排）
+  boat.png   睡莲、芦苇、涟漪圈（2×2 排；里面那条横着的船不用了）
+  boat_open.png  小船（上场位）：船头朝上的空木船
+  boat_canopy.png  同一条船搭着白篷子、旁边一面白旗：只取篷布和旗（局内按小队的颜色染色）
   props.png  小桥（已不用，跳过）、草丛两种、小花、灌木、小石子（3×2 排）
 
 去底：背景是纯品红，按「有多品红」算透明度再把颜色还原（不是硬阈值，边缘不出锯齿和粉边，docs/03 第 5 节）。
-用法：python3 client/tools/art/sprites.py [walk carry train boat props]，然后 ./run.sh art-compress、./run.sh meta
+用法：python3 client/tools/art/sprites.py [walk carry train boat canopy boat_open props]，然后 ./run.sh art-compress、./run.sh meta
 依赖：numpy、Pillow
 """
 import sys
@@ -149,18 +151,41 @@ def carry() -> None:
 
 
 def boat() -> None:
+    """boat.png 里只用睡莲、芦苇、涟漪圈；船换成 boat_canopy.png 的篷船"""
     a = unkey(RAW / 'boat.png')
     bs = rows(boxes(a[..., 3], 1500))
-    names = [('boat', 0), ('deco_lily', 30), ('deco_reed', 40), ('ripple', 36)]
-    if len(bs) != len(names):
-        raise SystemExit(f'boat.png 里要 {len(names)} 个东西，认出来 {len(bs)} 个')
-    # 船最大：按面积挑出来放第一个
+    names = [('deco_lily', 30), ('deco_reed', 40), ('ripple', 36)]
+    if len(bs) != len(names) + 1:
+        raise SystemExit(f'boat.png 里要 {len(names) + 1} 个东西，认出来 {len(bs)} 个')
+    # 最大的那个是旧的船，不要
     bs.sort(key=lambda b: -(b[2] - b[0]) * (b[3] - b[1]))
-    big, rest = bs[0], rows(bs[1:])
-    for b, (name, h) in zip([big] + rest, names):
-        save(crop(a, b), name, h or (b[3] - b[1]) * 66 / max(1, b[3] - b[1]))
-    # 船另存：按显示 66 高
-    save(crop(a, big), 'boat', 66)
+    for b, (name, h) in zip(rows(bs[1:]), names):
+        save(crop(a, b), name, h)
+
+
+def canopy() -> None:
+    """boat_canopy.png：一条搭着白篷子的船和一面白旗。只要篷布和旗：篷布、旗面是白的，局内按小队的颜色染色。
+    kit/boat_roof（篷布，叠在 kit/boat 上面，两张图是同一条船、同一个位置）；kit/flag_pole（旗杆）+ kit/flag（旗面）"""
+    a = unkey(RAW / 'boat_canopy.png')
+    bs = boxes(a[..., 3], 1500)
+    if len(bs) != 2:
+        raise SystemExit(f'boat_canopy.png 里要一条船和一面旗，认出来 {len(bs)} 个')
+    bs.sort(key=lambda b: -(b[2] - b[0]) * (b[3] - b[1]))
+    save(split_cloth(crop(a, bs[0]))[0], 'boat_roof', BOAT_H)
+    cloth, pole = split_cloth(crop(a, bs[1]))
+    save(cloth, 'flag', FLAG_H)
+    save(pole, 'flag_pole', FLAG_H)
+
+
+def boat_open() -> None:
+    """boat_open.png：同一条船不带篷子的样子（Codex 照 boat_canopy.png 重画的，位置大小对得上）。存成 kit/boat：
+    空着的上场位就是它；有小队时上面叠 kit/boat_roof"""
+    a = unkey(RAW / 'boat_open.png')
+    bs = boxes(a[..., 3], 4000)
+    if len(bs) != 1:
+        raise SystemExit(f'boat_open.png 里要一条船，认出来 {len(bs)} 个')
+    save(crop(a, bs[0]), 'boat', BOAT_H)
+    print(f'  kit/boat 的宽高比（宽 / 高）：{(bs[0][2] - bs[0][0]) / (bs[0][3] - bs[0][1]):.4f}')
 
 
 def train() -> None:
@@ -192,8 +217,11 @@ def props() -> None:
 
 # 车厢图从上往下多少比例是斗口（看图定的）
 WAGON_RIM = 0.30
+# 篷船、旗子显示多高（设计单位）
+BOAT_H = 156
+FLAG_H = 56
 
 if __name__ == '__main__':
-    which = sys.argv[1:] or ['walk', 'carry', 'train', 'boat', 'props']
+    which = sys.argv[1:] or ['walk', 'carry', 'train', 'boat', 'canopy', 'boat_open', 'props']
     for k in which:
-        {'walk': walk, 'carry': carry, 'train': train, 'boat': boat, 'props': props}[k]()
+        {'walk': walk, 'carry': carry, 'train': train, 'boat': boat, 'canopy': canopy, 'boat_open': boat_open, 'props': props}[k]()

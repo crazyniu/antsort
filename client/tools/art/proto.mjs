@@ -20,30 +20,28 @@ function out(path, w, h, body) {
   console.log(`✓ ${path}.png ${w * RES}×${h * RES}`);
 }
 
-// ---- 拼豆（显示 40 × 50）：带厚度的小方块，看着是立体的：左上亮、右下暗、侧面最深，面上一小条高光。
+// ---- 拼豆（显示 40 × 50）：带厚度的小方块。上面的面只占一格的八成多（33），下面永远露一条侧面，
+// 整幅画看着是一颗颗凸起来的；面是纯白（染出来就是色板上那个颜色，不压暗），四边一圈细的深线把相邻的豆分开。
 // 局内整张染色：白 → 豆的颜色，灰 → 深一档
 out(
   'kit/bead',
   40,
   50,
-  `<rect x="0" y="9" width="40" height="41" rx="7" fill="#a8a8a8"/>
-   <rect x="0" y="0" width="40" height="40" rx="7" fill="#dcdcdc"/>
-   <rect x="1.5" y="1.5" width="35" height="35" rx="6" fill="#ffffff"/>
-   <rect x="4" y="4" width="33" height="33" rx="5" fill="#f5f5f5"/>
-   <rect x="6.5" y="6.5" width="13" height="5" rx="2.5" fill="#ffffff"/>`,
+  `<rect x="0" y="8" width="40" height="42" rx="7" fill="#a8a8a8"/>
+   <rect x="0" y="0" width="40" height="33" rx="7" fill="#dbdbdb"/>
+   <rect x="1.2" y="1.2" width="37.6" height="30.6" rx="6" fill="#ffffff"/>`,
 );
 
-// ---- 拼豆的高光片（显示 40 × 50，不染色，叠在豆上面）：顶边亮条、斜着的光斑、角上的高光点、下沿和侧面压暗。
-// 豆本体是整张染色的（乘法染色提不亮），光泽只能用这张不染色的叠出来
+// ---- 拼豆的高光片（显示 40 × 50，不染色，叠在豆上面）：面上从左上往下淡出的一片柔光、角上一小条高光、侧面下沿压暗。
+// 豆本体是整张染色的（乘法染色提不亮），光泽只能用这张不染色的叠出来；柔光不能重，重了颜色发白
 out(
   'kit/bead_top',
   40,
   50,
-  `<rect x="3" y="2.5" width="34" height="5" rx="2.5" fill="#fff" fill-opacity="0.5"/>
-   <path d="M5 40 L5 16 Q5 8 13 8 L21 8 Z" fill="#fff" fill-opacity="0.22"/>
-   <rect x="5.5" y="5.5" width="10" height="4.5" rx="2.25" fill="#fff" fill-opacity="0.85"/>
-   <rect x="4" y="33" width="32" height="5" rx="2.5" fill="#000" fill-opacity="0.12"/>
-   <rect x="1.5" y="43" width="37" height="5.5" rx="2.75" fill="#000" fill-opacity="0.16"/>`,
+  `<defs><linearGradient id="g" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.3"/><stop offset="0.6" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+   <rect x="1.2" y="1.2" width="37.6" height="30.6" rx="6" fill="url(#g)"/>
+   <rect x="5" y="4.5" width="12" height="5" rx="2.5" fill="#fff" fill-opacity="0.8"/>
+   <rect x="0" y="39" width="40" height="11" rx="5" fill="#000" fill-opacity="0.08"/>`,
 );
 
 // ---- 小队方块（显示 100 × 92）：圆角方块，下面压一道深边；整张染色

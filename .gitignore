@@ -26,3 +26,6 @@ google-services.json
 i18n/*.translation
 
 client/build-config/.android.local.json
+
+# Playwright 截图验证留下的文件
+.playwright-mcp/

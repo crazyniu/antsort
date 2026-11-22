@@ -1,4 +1,4 @@
-// 像素画（docs/01 第 1.2、1.3 节）：把拼豆画摆出来，一格一颗带厚度的小方块，紧挨着排。
+// 像素画（docs/01 第 1.2、1.3 节）：把拼豆画摆出来，一格一颗带厚度的小方块，紧挨着排；搬走的格子露出米色的底格。
 // 只管画，不管规则：能不能搬、搬哪颗都由 core/dig/rules.ts 算，局内页面按事件调 dig()。
 // 这里自己留一份「画面上的豆」：规则是当场算完的，画面慢慢播，两边不同步。
 import { Color, Node, Sprite, Tween, Vec3, tween } from 'cc';
@@ -13,7 +13,10 @@ const CELL_MAX = 40;
 const SIDE = 0.25;
 /** 摞着的豆往上抬多少格 */
 const LIFT = 0.22;
-const PRINT = new Color(0, 0, 0, 30);
+/** 垫在每一格下面的底：深一点的棕色，豆的圆角之间、底格之间露出来的缝就是它 */
+const BASE = new Color(170, 118, 66, 255);
+/** 豆搬走以后露出来的底格：米色，比一格小一圈 */
+const PRINT = new Color(255, 233, 188, 255);
 
 export class Board {
   readonly node: Node;
@@ -23,11 +26,14 @@ export class Board {
   readonly colors: Color[];
   /** 画面上每个位置从下到上的豆（开局、重画时从局面抄一份） */
   private cols: number[][] = [];
+  private baseL: Node;
   private printL: Node;
   private beadL: Node;
   private glossL: Node;
   private beads: Node[] = [];
   private gloss: Node[] = [];
+  /** 每一格的米色底格：豆搬空了才露出来 */
+  private prints: (Node | null)[] = [];
 
   /** parent 里 w × h 的一块地方（居中摆） */
   constructor(parent: Node, w: number, h: number, private lv: DigLevel) {
@@ -35,6 +41,7 @@ export class Board {
     this.colors = lv.palette.map((c) => hex(c));
     this.node = box('board', parent, lv.w * this.cell, lv.h * this.cell);
     // 分层放：同一层用同一张图，引擎才能合批
+    this.baseL = box('base', this.node);
     this.printL = box('prints', this.node);
     this.beadL = box('beads', this.node);
     this.glossL = box('gloss', this.node);
@@ -62,6 +69,7 @@ export class Board {
 
   /** 画出整张（intro：从中间往外依次弹出） */
   build(s: GameState, intro: boolean, stagger = 0.02): void {
+    this.baseL.destroyAllChildren();
     this.printL.destroyAllChildren();
     this.beadL.destroyAllChildren();
     this.glossL.destroyAllChildren();
@@ -70,10 +78,16 @@ export class Board {
     const n = this.lv.w * this.lv.h;
     this.beads = [];
     this.gloss = [];
-    // 从上到下一行行放：下面一行盖住上面一行的侧面，只有下面空了才看得到厚度
+    this.prints = [];
+    // 从上到下一行行放：下面一行盖住上面一行垂下来的侧面；豆的面比一格矮，每颗下面都露一条侧面
     for (let p = 0; p < n; p++) {
       const at0 = this.pos(p);
-      if (this.lv.cols[p].length > 0) at(tint(this.printL, C, C, PRINT, 'print'), at0.x, at0.y);
+      let print: Node | null = null;
+      if (this.lv.cols[p].length > 0) {
+        at(tint(this.baseL, C, C, BASE, 'base'), at0.x, at0.y);
+        print = at(tint(this.printL, C - 2, C - 2, PRINT, 'print'), at0.x, at0.y);
+      }
+      this.prints.push(print);
       const bead = img(this.beadL, 'kit/bead', C, C * (1 + SIDE), 'bead');
       // 光泽：不染色的高光片，和豆同步（docs/01 第 3 节的「带厚度的立体小方块」）
       const gl = img(this.glossL, 'kit/bead_top', C, C * (1 + SIDE), 'gl');
@@ -101,6 +115,8 @@ export class Board {
     gl.setScale(1, 1, 1);
     bead.active = top >= 0;
     gl.active = top >= 0;
+    const print = this.prints[p];
+    if (print) print.active = top < 0;
     if (top < 0) return;
     const at0 = this.pos(p);
     // 图的上面那一块正好盖住这一格，侧面垂在格子下面；摞着的往上抬一点

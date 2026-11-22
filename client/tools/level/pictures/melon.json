@@ -1,10 +1,10 @@
 {
  "name": "西瓜",
  "colors": {
-  "A": "#e2293e",
-  "B": "#4a4160",
+  "A": "#ff4343",
+  "B": "#6a3a2a",
   "C": "#aef235",
-  "D": "#3bd95e"
+  "D": "#3ddc57"
  },
  "rows": [
   "BBBBBBBBBBBBBBBBBBBBBBBBBBBB",

@@ -60,23 +60,27 @@ const BADGE_H = 36;
 /** 画四周那圈路：中线离画多远、路多宽；草地和沙子路的颜色 */
 const PATH_OUT = 30;
 const PATH_W = 38;
-const GRASS = new Color(151, 220, 117, 255);
-const GRASS_IN = new Color(166, 229, 132, 255);
-const SAND = new Color(248, 227, 170, 255);
+// 颜色照效果图（art/raw/mock_game_page_v2）取：都是高饱和的亮色，画上的豆才不显灰
+const GRASS = new Color(140, 222, 66, 255);
+const SAND = new Color(251, 215, 128, 255);
+/** 沙子路的边：深一档的一圈细线，路看着是压在草地上的 */
+const SAND_EDGE = new Color(226, 181, 92, 255);
+const EDGE_W = 3;
 /** 小河多高；水的三个颜色（深、中、亮） */
 const RIVER_H = 150;
-const WATER_DEEP = new Color(44, 148, 212, 255);
-const WATER = new Color(72, 186, 241, 255);
-const WATER_LIGHT = new Color(176, 228, 255, 255);
+const WATER_DEEP = new Color(16, 138, 232, 255);
+const WATER = new Color(34, 174, 252, 255);
+const WATER_LIGHT = new Color(178, 232, 255, 255);
 /** 草地上的小摆设：[图, 显示多高] */
 const DECO: [string, number][] = [
   ['kit/deco_tuft1', 24],
   ['kit/deco_tuft2', 24],
   ['kit/deco_flower', 30],
-  ['kit/deco_bush', 42],
+  ['kit/deco_tuft2', 20],
   ['kit/deco_pebble', 14],
   ['kit/deco_tuft1', 22],
-  ['kit/deco_flower', 30],
+  ['kit/deco_flower', 28],
+  ['kit/deco_tuft1', 18],
 ];
 /** 倍速开关：开着就一直开着，换关不重置 */
 let fast = false;
@@ -349,7 +353,8 @@ export class GamePage extends Page {
 
     // ---- 版式（玩法，docs/01 第 3 节）：从上到下 顶栏 → 铁轨和火车 → 拼豆画（四周一圈路）→ 小河（船 = 上场位）→ 河对岸的排队区 → 技能栏
     const railY = hudY - h / 2 - 118;
-    const trackTop = skillY + SKILL_S / 2 + 26 + Station.trackHeight();
+    // 技能一个都还没解锁（前几关）：排队区往下挪，不留一条空的技能栏
+    const trackTop = skillY - SKILL_S / 2 + (ids.length > 0 ? SKILL_S + 26 : 54) + Station.trackHeight();
     const riverC = trackTop + 30 + RIVER_H / 2;
     this.stationY = riverC - 2;
     const riverTop = riverC + RIVER_H / 2;
@@ -410,28 +415,42 @@ export class GamePage extends Page {
     const paint = (n: Node, c: Color): void => {
       (n.getChildByName('skin')?.getComponent(Sprite) as Sprite).color = c;
     };
-    at(tint(ground, Screen.W, 40, SAND, 'railbed'), 0, railY + 8);
-    const ring = slice(ground, 'kit/round_white', f.r - f.l + PATH_W, f.t - f.b + PATH_W, 'ring');
-    at(ring, 0, (f.t + f.b) / 2);
-    paint(ring, SAND);
-    const inner = slice(ground, 'kit/round_white', f.r - f.l - PATH_W, f.t - f.b - PATH_W, 'inner');
-    at(inner, 0, (f.t + f.b) / 2);
-    paint(inner, GRASS_IN);
+    // 沙地分两遍画：先画每一块的深色边（大一圈），再画沙子，接起来的地方边线不会横穿过去
+    const sands: { w: number; h: number; x: number; y: number; round: boolean }[] = [];
+    const sand = (w: number, h: number, x: number, y: number, round = false): void => {
+      sands.push({ w, h, x, y, round });
+    };
+    const fy = (f.t + f.b) / 2;
+    sand(Screen.W, 40, 0, railY + 8);
+    sand(f.r - f.l + PATH_W, f.t - f.b + PATH_W, 0, fy, true);
     for (const sx of [-1, 1]) {
       // 往上接到路基、往下接到河岸的小路
-      at(tint(ground, 44, railY - f.t + PATH_W, SAND, 'up'), (sx * (f.r - f.l)) / 4, (railY + f.t) / 2);
+      sand(44, railY - f.t + PATH_W, (sx * (f.r - f.l)) / 4, (railY + f.t) / 2);
       const dh = f.b - riverTop + PATH_W / 2;
-      if (dh > 10) at(tint(ground, 44, dh, SAND, 'down'), (sx * (f.r - f.l)) / 4, (f.b - PATH_W / 2 + riverTop) / 2 + 6);
+      if (dh > 10) sand(44, dh, (sx * (f.r - f.l)) / 4, (f.b - PATH_W / 2 + riverTop) / 2 + 6);
     }
-    // ---- 小河：水面是活的（流光、涟漪、睡莲、芦苇）
-    this.river(ground, riverC);
     // 两边的河岸
-    at(tint(ground, Screen.W, 22, SAND, 'bankT'), 0, riverTop + 9);
-    at(tint(ground, Screen.W, 22, SAND, 'bankB'), 0, riverC - RIVER_H / 2 - 9);
-    // 排队区的沙地
-    const patch = slice(ground, 'kit/round_white', 486, Station.trackHeight() + 40, 'patch');
-    at(patch, 0, trackTop - Station.trackHeight() / 2 + 6);
-    paint(patch, SAND);
+    sand(Screen.W, 22, 0, riverTop + 9);
+    sand(Screen.W, 22, 0, riverC - RIVER_H / 2 - 9);
+    // 排队区的沙地：按列数定宽
+    const T = this.s.tracks.length;
+    sand(Station.trackSpan(T, Screen.W) + 76, Station.trackHeight() + 40, 0, trackTop - Station.trackHeight() / 2 + 6, true);
+    const piece = (o: (typeof sands)[number], grow: number, c: Color, name: string): void => {
+      if (o.round) {
+        const n = slice(ground, 'kit/round_white', o.w + grow * 2, o.h + grow * 2, name);
+        at(n, o.x, o.y);
+        paint(n, c);
+      } else at(tint(ground, o.w + grow * 2, o.h + grow * 2, c, name), o.x, o.y);
+    };
+    for (const o of sands) piece(o, EDGE_W, SAND_EDGE, 'edge');
+    for (const o of sands) piece(o, 0, SAND, 'sand');
+    // 那圈路里面还是草地（和外面同一个颜色：整屏一个场景），也描一圈边
+    const inW = f.r - f.l - PATH_W;
+    const inH = f.t - f.b - PATH_W;
+    piece({ w: inW, h: inH, x: 0, y: fy, round: true }, 0, SAND_EDGE, 'innerEdge');
+    piece({ w: inW, h: inH, x: 0, y: fy, round: true }, -EDGE_W, GRASS, 'inner');
+    // ---- 小河：水面是活的（流光、涟漪、睡莲、芦苇）。盖在河岸的沙地上面
+    this.river(ground, riverC);
     this.board.build(this.s, intro, App.config.ui.intro.stagger);
 
     // ---- 铁轨、火车、小桥
@@ -496,23 +515,40 @@ export class GamePage extends Page {
     if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
   }
 
-  /** 草地上撒几样小摆设：那圈路外面的空地、排队区沙地两边，位置按关卡号定，同一关每次都一样 */
+  /** 草地上撒小摆设（草丛、小花、石子，角上放灌木）：排队区沙地两边、那圈路外面的空地。位置按关卡号定，同一关每次都一样 */
   private decorate(ground: Node, trackTop: number): void {
     const f = this.field;
     const rng = new Rng(this.lv.id * 7919 + 17);
+    const half = Station.trackSpan(this.s.tracks.length, Screen.W) / 2 + 38 + 26;
+    const bottom = trackTop - Station.trackHeight() - 30;
     const zones: [number, number, number, number][] = [
-      [-Screen.W / 2 + 14, f.l - PATH_W / 2 - 16, f.b + 60, f.t - 10],
-      [f.r + PATH_W / 2 + 16, Screen.W / 2 - 14, f.b + 60, f.t - 10],
-      [-Screen.W / 2 + 16, -268, trackTop - 244, trackTop - 20],
-      [268, Screen.W / 2 - 16, trackTop - 244, trackTop - 70],
+      [-Screen.W / 2 + 14, f.l - PATH_W / 2 - 14, f.b + 40, f.t - 10],
+      [f.r + PATH_W / 2 + 14, Screen.W / 2 - 14, f.b + 40, f.t - 10],
+      [-Screen.W / 2 + 20, -half, bottom, trackTop - 4],
+      // 右边上面是倍速开关，让开
+      [half, Screen.W / 2 - 20, bottom, trackTop - 64],
     ];
+    const put: [number, number][] = [];
     for (const [x0, x1, y0, y1] of zones) {
-      if (x1 - x0 < 24 || y1 - y0 < 24) continue;
-      const n = Math.max(1, Math.round(((x1 - x0) * (y1 - y0)) / 9000));
-      for (let i = 0; i < Math.min(6, n); i++) {
-        const [path, h] = DECO[Math.floor(rng.randf() * DECO.length) % DECO.length];
-        at(img(ground, path, undefined, h, 'deco'), x0 + rng.randf() * (x1 - x0), y0 + rng.randf() * (y1 - y0));
+      if (x1 - x0 < 20 || y1 - y0 < 24) continue;
+      const n = Math.min(9, Math.max(1, Math.round(((x1 - x0) * (y1 - y0)) / 4200)));
+      for (let i = 0; i < n; i++) {
+        // 试几次找一个不和别的摆设挤在一起的位置，找不到就不放
+        for (let k = 0; k < 6; k++) {
+          const x = x0 + rng.randf() * (x1 - x0);
+          const y = y0 + rng.randf() * (y1 - y0);
+          if (put.some(([px, py]) => Math.hypot(px - x, py - y) < 40)) continue;
+          put.push([x, y]);
+          const [path, h] = DECO[Math.floor(rng.randf() * DECO.length) % DECO.length];
+          at(img(ground, path, undefined, h, 'deco'), x, y);
+          break;
+        }
       }
+    }
+    // 下面两个角上各一丛灌木（半截在屏幕外），压住画面的角
+    for (const sx of [-1, 1]) {
+      at(img(ground, 'kit/deco_bush', undefined, 76, 'bush'), sx * (Screen.W / 2 - 22), bottom - 6);
+      at(img(ground, 'kit/deco_bush', undefined, 50, 'bush'), sx * (Screen.W / 2 - 84), bottom - 30);
     }
   }
 

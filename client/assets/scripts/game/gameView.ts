@@ -64,7 +64,7 @@ const BG = new Color(197, 200, 219, 255);
 const WALK_H = 40;
 const WALK = new Color(255, 255, 255, 70);
 /** 天桥显示多宽多高（kit/bridge 宽 / 高 0.342，横向放宽一点）、离屏幕两边多远 */
-const BRIDGE_W = 78;
+const BRIDGE_W = 84;
 const BRIDGE_IN = 62;
 /** 画和四周看不见的那一圈隔多远（小人在这一圈上绕）、那一圈的圆角 */
 const PIC_GAP = 30;
@@ -395,6 +395,7 @@ export class GamePage extends Page {
       exitY: trayTop - 6,
       walkY,
       bridges: [-bridgeX, bridgeX],
+      landY: railY + Train.height + 6,
     };
     this.fieldTop = picTop;
     this.fieldBottom = picBottom;
@@ -424,8 +425,11 @@ export class GamePage extends Page {
       this.lastDropSfx = this.vnow;
       sfx('bowl', 0, 0.3);
     });
-    const bridgeH = dropY + 16 - (walkY - WALK_H / 2 + 2);
-    const bridgeY = (dropY + 16 + walkY - WALK_H / 2 + 2) / 2;
+    // 桥从走道下沿一直伸到火车后面（盖过车头），小人下了桥就站在车厢后沿那条线上
+    const bridgeBot = walkY - WALK_H / 2 - 6;
+    const bridgeTopY = railY + Train.height + 24;
+    const bridgeH = bridgeTopY - bridgeBot;
+    const bridgeY = (bridgeTopY + bridgeBot) / 2;
     for (const sx of [-1, 1]) at(img(rail, 'kit/bridge', BRIDGE_W, bridgeH, 'bridge'), sx * bridgeX, bridgeY);
     // ---- 上场位、排队区、已经在场上的方块（复活后重画）
     this.station = new Station(

@@ -18,7 +18,7 @@ const TRAY_R = 26;
 /** 托盘的颜色：比背景深一档的半透明；细的浅色边和分隔线 */
 const TRAY_FILL = new Color(132, 136, 176, 120);
 const TRAY_EDGE = new Color(255, 255, 255, 150);
-const TRAY_LINE = new Color(255, 255, 255, 90);
+const TRAY_LINE = new Color(255, 255, 255, 150);
 /** 空格子告急时泛的红 */
 const WARN_RED = new Color(255, 120, 120, 120);
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */

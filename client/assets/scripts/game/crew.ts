@@ -48,8 +48,9 @@ export interface Field {
   /** 小人从方块的哪个高度走出来（托盘上沿）、走道的中线 */
   exitY: number;
   walkY: number;
-  /** 两座天桥的 x（桥从走道一直通到那一圈的下沿） */
+  /** 两座天桥的 x（桥从走道一直通到火车后面）；下了桥落在哪个高度（再往前走几步就到那一圈的下沿） */
   bridges: number[];
+  landY: number;
 }
 
 interface Walker {
@@ -258,7 +259,7 @@ export class Crew {
       const c = f.carPos(job.car);
       const bx = this.bridgeFor(c.x);
       start = new Vec3(bx, f.b, 0);
-      pts.push(new Vec3(c.x, f.exitY, 0), new Vec3(c.x, f.walkY, 0), new Vec3(bx, f.walkY, 0), start);
+      pts.push(new Vec3(c.x, f.exitY, 0), new Vec3(c.x, f.walkY, 0), new Vec3(bx, f.walkY, 0), new Vec3(bx, f.landY, 0), start);
     }
     pts.push(...this.ring(start, job.inside[0]));
     for (let i = 1; i < job.inside.length; i++) pts.push(job.inside[i]);
@@ -283,6 +284,7 @@ export class Crew {
     return [
       new Vec3(w.x, f.b, 0),
       new Vec3(bx, f.b, 0),
+      new Vec3(bx, f.landY, 0),
       new Vec3(bx, f.walkY, 0),
       new Vec3(w.home.x, f.walkY, 0),
       new Vec3(w.home.x, f.exitY, 0),

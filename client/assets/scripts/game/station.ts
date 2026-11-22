@@ -21,7 +21,7 @@ export const TRACK_ROWS = 3;
 const COL_GAP = 150;
 const BUMP_TAG = 9301;
 /** 后排的方块压暗到多少 */
-const DIM = 0.62;
+const DIM = 0.74;
 
 export interface CarView {
   node: Node;

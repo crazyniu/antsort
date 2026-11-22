@@ -60,9 +60,9 @@ const BADGE_H = 36;
 /** 画四周那圈路：中线离画多远、路多宽；草地和沙子路的颜色 */
 const PATH_OUT = 30;
 const PATH_W = 38;
-const GRASS = new Color(140, 211, 106, 255);
-const GRASS_IN = new Color(154, 220, 120, 255);
-const SAND = new Color(244, 222, 164, 255);
+const GRASS = new Color(151, 220, 117, 255);
+const GRASS_IN = new Color(166, 229, 132, 255);
+const SAND = new Color(248, 227, 170, 255);
 /** 小河多高；水的三个颜色（深、中、亮） */
 const RIVER_H = 150;
 const WATER_DEEP = new Color(44, 148, 212, 255);

@@ -26,10 +26,10 @@ out(
   'kit/bead',
   40,
   50,
-  `<rect x="0" y="9" width="40" height="41" rx="7" fill="#8f8f8f"/>
-   <rect x="0" y="0" width="40" height="40" rx="7" fill="#c9c9c9"/>
+  `<rect x="0" y="9" width="40" height="41" rx="7" fill="#a8a8a8"/>
+   <rect x="0" y="0" width="40" height="40" rx="7" fill="#dcdcdc"/>
    <rect x="1.5" y="1.5" width="35" height="35" rx="6" fill="#ffffff"/>
-   <rect x="4" y="4" width="33" height="33" rx="5" fill="#eeeeee"/>
+   <rect x="4" y="4" width="33" height="33" rx="5" fill="#f5f5f5"/>
    <rect x="6.5" y="6.5" width="13" height="5" rx="2.5" fill="#ffffff"/>`,
 );
 

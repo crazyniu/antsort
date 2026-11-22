@@ -23,5 +23,5 @@ export const SPECS: Spec[] = [
   // 1：怎么点都能过
   { id: 1, layers: ['melon'], tracks: 2, car: [20, 120], maxCars: 5, mechanics: [], target: { random: [1, 1], safe: [1, 1] } },
   // 2：大一点的画，开始有「叫早了白占位子」
-  { id: 2, layers: ['cakeslice'], tracks: 3, car: [12, 70], mechanics: [], target: { random: [0.6, 0.9], safe: [1, 1] } },
+  { id: 2, layers: ['shortcake'], tracks: 3, car: [12, 70], mechanics: [], target: { random: [0.6, 0.9], safe: [1, 1] } },
 ];

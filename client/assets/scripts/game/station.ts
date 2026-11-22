@@ -22,7 +22,7 @@ const SEAT_W = 0.68;
 const SEAT_B = 0.83;
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */
 const QUEUE_K = 1;
-const ROW_H = 80;
+const ROW_H = 90;
 export const TRACK_ROWS = 3;
 const COL_GAP = 124;
 const BUMP_TAG = 9301;

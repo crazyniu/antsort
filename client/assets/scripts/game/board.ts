@@ -8,7 +8,7 @@ import * as fx from '../ui/fx';
 import { at, box, hex, img, size, tint } from '../ui/kit';
 
 /** 一格最大多大（设计单位）：小画也不放得太大，四周留着草地 */
-const CELL_MAX = 26;
+const CELL_MAX = 22;
 /** 豆的图（kit/bead）比一格高出多少：下面那一条是侧面 */
 const SIDE = 0.25;
 /** 摞着的豆往上抬多少格 */

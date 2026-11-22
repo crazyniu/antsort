@@ -1,16 +1,17 @@
 // 小人（docs/01 第 3 节）：从船上的方块里「跳」上岸（一道弧线）→ 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
 // → 绕到画上面、走到车厢边放进火车 → 空着手沿铁轨走出画面消失。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
 // 出发的先后要守住一条：后一轮才露出来的豆，不能比前一轮的豆先被搬走（不然看着像是从里面掏的）。
-// 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、举着豆一套（kit/wk_*，tools/art/sprites.py 切的）。
+// 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、双手伸在身前抱东西一套（kit/wk_*，tools/art/sprites.py 切的）。
+// 抱着的豆（kit/cube）画在「身前」：往两边走在手那一侧，往下走在胸前（盖住身子），往上走在头顶后面（俯视的画面里，身前就是画面上方，被头挡住一半）。
 import { Color, Node, Sprite, SpriteFrame, Vec3 } from 'cc';
 import { at, box, img, size } from '../ui/kit';
 import { frame } from '../ui/res';
 import type { CarView } from './station';
 import type { Drop, Train } from './train';
 
-/** 小人显示多高、手里的豆多大、从船上跳上岸用几秒 */
-const H = 48;
-const CUBE = 18;
+/** 小人显示多高、抱着的豆多宽（kit/cube 宽 40 高 44）、从船上跳上岸用几秒 */
+const H = 46;
+const CUBE = 23;
 const JUMP = 0.3;
 /** 姿势：f 正面、s 侧面、b 背面；前面加 c 是举着豆的 */
 const POSES = ['f', 's', 'b', 'cf', 'cs', 'cb'] as const;
@@ -43,7 +44,10 @@ export interface Field {
 interface Walker {
   body: Node;
   top: Node;
+  /** 抱着的豆：画在身子前面的一份、画在身子后面的一份（往上走时用），按方向显示其中一份 */
   cube: Node;
+  cubeB: Node;
+  carry: boolean;
   job: Job;
   pts: Vec3[];
   seg: number;
@@ -67,6 +71,7 @@ interface Walker {
 }
 
 export class Crew {
+  private cubeBackL: Node;
   private bodyL: Node;
   private topL: Node;
   private cubeL: Node;
@@ -92,6 +97,7 @@ export class Crew {
     private onPick: (job: Job) => void,
     private onSend: (job: Job) => void,
   ) {
+    this.cubeBackL = box('cubesBack', layer);
     this.bodyL = box('bodies', layer);
     this.topL = box('tops', layer);
     this.cubeL = box('cubes', layer);
@@ -261,7 +267,7 @@ export class Crew {
         if (w.drop && this.train.ready(w.drop.train)) {
           // 放进车厢，然后空着手沿铁轨走出画面
           this.train.drop(w.drop, w.job.color);
-          w.cube.active = false;
+          w.carry = false;
           const exitX = (w.x >= 0 ? 1 : -1) * (this.cfg.width / 2 + 40);
           w.pts = [new Vec3(w.x, w.y, 0), new Vec3(exitX, w.y + 10, 0)];
           w.seg = 0;
@@ -290,7 +296,7 @@ export class Crew {
         if (w.phase === 0) {
           // 到豆旁边了：抱起来，定好放在哪节车厢，往火车走
           this.onPick(w.job);
-          w.cube.active = true;
+          w.carry = true;
           w.drop = this.train.reserve(w.job.color);
           w.pts = [new Vec3(w.x, w.y, 0), ...this.routeBack(w.job, w.drop)];
           w.seg = 0;
@@ -335,7 +341,7 @@ export class Crew {
     // 往上走是背面，往下走是正面，左右是侧面（往左翻转）
     const side = Math.abs(w.mdx) > Math.abs(w.mdy);
     const dir: Pose = side ? 's' : w.mdy > 0 ? 'b' : 'f';
-    const pose = (w.cube.active ? `c${dir}` : dir) as Pose;
+    const pose = (w.carry ? `c${dir}` : dir) as Pose;
     const list = this.frames.get(pose);
     if (!list || list.length === 0) return;
     const fi = walking ? Math.floor(w.step / (Math.PI / 2)) % list.length : 0;
@@ -356,7 +362,12 @@ export class Crew {
     const y = w.y + w.oy + hop;
     at(w.body, x, y + H * 0.34);
     at(w.top, x, y + H * 0.34);
-    if (w.cube.active) at(w.cube, x, y + H * 0.34 + H * 0.52);
+    w.cube.active = w.carry && dir !== 'b';
+    w.cubeB.active = w.carry && dir === 'b';
+    if (!w.carry) return;
+    if (dir === 's') at(w.cube, x + flip * H * 0.4, y + H * 0.28);
+    else if (dir === 'f') at(w.cube, x, y + H * 0.16);
+    else at(w.cubeB, x, y + H * 0.8);
   }
 
   /** 该出发的出发：每个方块隔 gap 秒放一个；后一批的要等前一批都出发了，而且不能比前一批先到 */
@@ -401,7 +412,9 @@ export class Crew {
       w = {
         body: img(this.bodyL, 'kit/wk_b_0b', undefined, H, 'w'),
         top: img(this.topL, 'kit/wk_b_0t', undefined, H, 'w'),
-        cube: img(this.cubeL, 'kit/bead', CUBE, CUBE * 1.25, 'c'),
+        cube: img(this.cubeL, 'kit/cube', CUBE, CUBE * 1.1, 'c'),
+        cubeB: img(this.cubeBackL, 'kit/cube', CUBE, CUBE * 1.1, 'c'),
+        carry: false,
         job,
         pts,
         seg: 0,
@@ -441,9 +454,12 @@ export class Crew {
     const col = this.colors[job.color] ?? Color.WHITE;
     (w.body.getComponent(Sprite) as Sprite).color = col;
     (w.cube.getComponent(Sprite) as Sprite).color = col;
+    (w.cubeB.getComponent(Sprite) as Sprite).color = col;
     w.body.active = true;
     w.top.active = true;
+    w.carry = false;
     w.cube.active = false;
+    w.cubeB.active = false;
     w.body.setScale(1, 1, 1);
     w.top.setScale(1, 1, 1);
     this.walkers.push(w);
@@ -457,6 +473,7 @@ export class Crew {
     w.body.active = false;
     w.top.active = false;
     w.cube.active = false;
+    w.cubeB.active = false;
     this.pool.push(w);
   }
 }

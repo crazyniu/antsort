@@ -2,11 +2,11 @@
 """把 Codex 画的素材图（品红底，一张图里几个东西）切开、去底、缩到规格，写进 assets/resources/ui/kit/。
 
 来源在 art/raw/sprites/（出图需求见 art/briefs/game_sprites.md）：
-  walk.png   小人空手走路：4 列 × 3 行（正面、侧面朝右、背面各 4 帧）
-  carry.png  小人双手举过头走路（举着豆）：同样 4 列 × 3 行
+  walk2.png  小人空手走路：4 列 × 3 行（正面、侧面朝右、背面各 4 帧）。照效果图的画风：圆滚滚、连帽衫整身一个颜色、没有黑描边
+  carry2.png 小人双手伸在身前走路（抱着豆，豆由代码画）：同样 4 列 × 3 行
              帽子和衣服是白的，局内按小队的颜色染色，所以每帧切成两张：
              kit/wk_<姿势>_<帧>b（白衣帽，染色）和 kit/wk_<姿势>_<帧>t（脸、手、鞋，不染色）；
-             姿势 f 正面（往下走）/ s 侧面（朝右）/ b 背面（往上走），举着豆的前面加 c（cf、cs、cb）
+             姿势 f 正面（往下走）/ s 侧面（朝右）/ b 背面（往上走），抱着豆的前面加 c（cf、cs、cb）
   train.png  车头、空车厢
   boat.png   睡莲、芦苇、涟漪圈（2×2 排；里面那条横着的船不用了）
   boat_moored.png  小船（上场位）：船头朝上、船头有木桩的空木船，一张图一条
@@ -111,7 +111,8 @@ def split_cloth(canvas: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     rgb, alpha = canvas[..., :3], canvas[..., 3]
     mx, mn = rgb.max(-1), rgb.min(-1)
     sat = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0)
-    cloth = (sat < 0.2) & (mx > 0.5)
+    # 白衣帽：不带颜色、够亮的像素。阈值放宽一点（软阴影里会带一点点暖色），肤色的饱和度在 0.3 以上，不会被算进来
+    cloth = (sat < 0.22) & (mx > 0.42)
     body = np.zeros_like(canvas)
     v = np.clip(mx / 0.97, 0, 1)
     body[..., 0] = body[..., 1] = body[..., 2] = v
@@ -142,11 +143,11 @@ def sheet12(file: str, poses: tuple[str, str, str]) -> None:
 
 
 def walk() -> None:
-    sheet12('walk.png', ('f', 's', 'b'))
+    sheet12('walk2.png', ('f', 's', 'b'))
 
 
 def carry() -> None:
-    sheet12('carry.png', ('cf', 'cs', 'cb'))
+    sheet12('carry2.png', ('cf', 'cs', 'cb'))
 
 
 def boat() -> None:

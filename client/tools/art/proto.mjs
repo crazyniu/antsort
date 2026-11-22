@@ -44,23 +44,16 @@ out(
    <rect x="0" y="40" width="40" height="10" rx="5" fill="#000" fill-opacity="0.06"/>`,
 );
 
-// ---- 小人抱着的豆（显示 40 × 44）：斜着看的小方块，看得到上面和两个侧面；整张染色
+// ---- 小人抱着的豆（显示 40 × 44）：斜着看的小方块，看得到上面和两个侧面，外面一圈深色的边（小人的衣服和豆一个颜色，没有边分不出来）；整张染色
 out(
   'kit/cube',
   40,
   44,
-  `<g stroke-linejoin="round" stroke-width="2">
-   <path d="M2 11 L20 21 L20 42 L2 32 Z" fill="#d4d4d4" stroke="#d4d4d4"/>
-   <path d="M20 21 L38 11 L38 32 L20 42 Z" fill="#a9a9a9" stroke="#a9a9a9"/>
+  `<path d="M20 2 L38 11 L38 32 L20 42 L2 32 L2 11 Z" fill="#8a8a8a" stroke="#8a8a8a" stroke-width="4" stroke-linejoin="round"/>
+   <g stroke-linejoin="round" stroke-width="1">
+   <path d="M2 11 L20 21 L20 42 L2 32 Z" fill="#d6d6d6" stroke="#d6d6d6"/>
+   <path d="M20 21 L38 11 L38 32 L20 42 Z" fill="#b0b0b0" stroke="#b0b0b0"/>
    <path d="M20 2 L38 11 L20 21 L2 11 Z" fill="#ffffff" stroke="#ffffff"/></g>`,
-);
-// 抱着的豆的高光（不染色）：上面那一面亮一点
-out(
-  'kit/cube_top',
-  40,
-  44,
-  `<path d="M20 3 L36 11 L20 19.5 L4 11 Z" fill="#fff" fill-opacity="0.3"/>
-   <path d="M8 10 L19 4.5 L22 6 L11 11.5 Z" fill="#fff" fill-opacity="0.45"/>`,
 );
 
 // ---- 小队方块（显示 100 × 84）：圆角方块，下面压一道厚的深边（比例照效果图：扁一点、底边厚）；整张染色

@@ -61,7 +61,7 @@ const BADGE_H = 36;
 const RING_OUT = 30;
 const PATH_W = 44;
 const RING_R = 70;
-const PIC_GAP = 30;
+const PIC_GAP = 40;
 // 颜色照效果图（art/raw/mock_game_page_v2）取：都是高饱和的亮色，画上的豆才不显灰
 const GRASS = new Color(140, 222, 66, 255);
 const SAND = new Color(251, 215, 128, 255);

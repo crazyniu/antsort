@@ -1,16 +1,19 @@
-// 上场位和排队区（docs/01 第 1.2 节）：上面一排上场位（5 个 + 一个「＋」），下面几列排队的小队方块。
+// 上场位和排队区（docs/01 第 1.2 节）：河里一排小船就是上场位（5 条 + 一条「＋」），河对岸几列排队的小队方块。
 // 只管画和点：点了方块调 onTapCar，规则在 core/dig/rules.ts，什么时候上场、搬豆、离场由局内页面按事件安排。
 // 代码里的名字沿用上一版：car = 小队方块，track = 排队区的一列，place = 上场位。
 import { Color, Label, Node, Sprite, Tween, Vec3, tween } from 'cc';
 import type { GameState } from '../core/dig/rules';
 import * as fx from '../ui/fx';
-import { COLOR, at, box, img, onTap, opacity, resizeSlice, setSlice, slice, text } from '../ui/kit';
+import { COLOR, at, box, img, onTap, opacity, size, text } from '../ui/kit';
 
 /** 方块的显示尺寸（kit/block_body） */
 export const CAR_W = 100;
 export const CAR_H = 92;
-/** 上场位的格子多高 */
+/** 上场位（船）占的高度；船的图宽高比（kit/boat） */
 const PAD_H = 100;
+const BOAT_K = 198 / 339;
+/** 方块坐在船上，比船的中心高多少 */
+const SEAT = 14;
 /** 排队区里方块缩到多大、一行占多高、最多露出几行、两列隔多远 */
 const QUEUE_K = 0.82;
 const ROW_H = 80;
@@ -44,14 +47,12 @@ export class Station {
   tracks: CarView[][] = [];
   private pads: Node[] = [];
   private plusPad: Node | null = null;
-  /** 垫在所有格子下面的一整块托盘 */
-  private tray: Node | null = null;
   private more: Label[] = [];
   private warn = false;
 
   /**
-   * stage：放格子和方块的层。stationY：上场位那一排的中线；trackTop：排队区最上面。
-   * plus：还能不能加位（能就多画一格「＋」，点它调 onPlus）
+   * stage：放船和方块的层。stationY：船那一排的中线；trackTop：排队区最上面。
+   * plus：还能不能加位（能就多画一条「＋」的船，点它调 onPlus）
    */
   constructor(
     private stage: Node,
@@ -129,40 +130,40 @@ export class Station {
     return Math.min(122, (this.width - 20) / Math.max(1, this.padCount()));
   }
 
-  /** 方块在上场位上缩到多大 */
+  /** 方块在船上缩到多大 */
   carScale(): number {
-    return Math.min(1, (this.placeW() - 16) / CAR_W);
+    return Math.min(1, (this.placeW() - 26) / CAR_W);
   }
 
   placePos(i: number): Vec3 {
     const w = this.placeW();
-    return new Vec3((i - (this.padCount() - 1) / 2) * w, this.stationY, 0);
+    return new Vec3((i - (this.padCount() - 1) / 2) * w, this.stationY + SEAT, 0);
   }
 
-  /** 上场位变成 count 个：格子重排，上面的方块跟着挪。加过位以后「＋」那一格变成真的位子 */
+  /** 造一条船 */
+  private makeBoat(): Node {
+    const w = this.placeW() - 6;
+    return img(this.stage, 'kit/boat', w, w * BOAT_K, 'boat');
+  }
+
+  /** 上场位变成 count 条船：船重排，上面的方块跟着挪。加过位以后「＋」那条船变成真的位子 */
   setSlots(count: number, instant = false): void {
     if (!instant && count > this.places.length) this.plus = false;
     while (this.places.length < count) this.places.push(null);
     const w = this.placeW();
-    if (!this.tray) {
-      this.tray = slice(this.stage, 'kit/slot', 10, PAD_H + 16, 'tray');
-      this.tray.setSiblingIndex(0);
-      opacity(this.tray).opacity = 150;
-    }
-    resizeSlice(this.tray, this.padCount() * w + 12, PAD_H + 16);
-    at(this.tray, 0, this.stationY);
     while (this.pads.length < count) {
-      const pad = slice(this.stage, 'kit/slot', w - 10, PAD_H, 'pad');
-      // 格子垫在方块下面、托盘上面
-      pad.setSiblingIndex(1);
+      const pad = this.makeBoat();
+      // 船垫在方块下面
+      pad.setSiblingIndex(0);
       this.pads.push(pad);
       if (!instant) fx.popIn(pad, 0, 0.25);
     }
     if (this.plus && !this.plusPad) {
-      const pad = slice(this.stage, 'kit/slot', w - 10, PAD_H, 'plus');
-      pad.setSiblingIndex(1);
-      opacity(pad).opacity = 170;
-      text(pad, '+', 56, { color: COLOR.white });
+      const pad = this.makeBoat();
+      pad.setSiblingIndex(0);
+      opacity(pad).opacity = 200;
+      const plus = text(pad, '+', 54, { color: COLOR.white, outline: new Color(60, 90, 140, 255), outlineWidth: 5 });
+      at(plus.node, 0, 10);
       onTap(pad, () => this.onPlus());
       this.plusPad = pad;
     }
@@ -172,10 +173,10 @@ export class Station {
     }
     const all = this.plusPad ? [...this.pads, this.plusPad] : this.pads;
     all.forEach((pad, i) => {
-      resizeSlice(pad, w - 10, PAD_H);
+      size(pad, w - 6, (w - 6) * BOAT_K);
       const p = this.placePos(i);
-      if (instant) at(pad, p.x, p.y);
-      else tween(pad).to(0.2, { position: p }, { easing: 'quadOut' }).start();
+      if (instant) at(pad, p.x, this.stationY);
+      else tween(pad).to(0.2, { position: new Vec3(p.x, this.stationY, 0) }, { easing: 'quadOut' }).start();
     });
     const k = this.carScale();
     this.places.forEach((car, i) => {
@@ -191,11 +192,13 @@ export class Station {
     return this.places.indexOf(null);
   }
 
-  /** 上场位告急：空着的格子变红 */
+  /** 上场位告急：空着的船泛红 */
   setWarn(on: boolean): void {
     if (on === this.warn && !on) return;
     this.warn = on;
-    this.pads.forEach((pad, i) => setSlice(pad, on && !this.places[i] ? 'kit/slot_warn' : 'kit/slot'));
+    this.pads.forEach((pad, i) => {
+      (pad.getComponent(Sprite) as Sprite).color = on && !this.places[i] ? new Color(255, 150, 136, 255) : Color.WHITE;
+    });
   }
 
   /** 上场位一起闪一下（满了还点） */

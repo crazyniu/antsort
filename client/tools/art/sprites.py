@@ -2,13 +2,17 @@
 """把 Codex 画的素材图（品红底，一张图里几个东西）切开、去底、缩到规格，写进 assets/resources/ui/kit/。
 
 来源在 art/raw/sprites/（出图需求见 art/briefs/game_sprites.md）：
-  worker.png  小人 4 个姿势排成一行：走路两帧、举着手走两帧。帽子和衣服是白的，局内按小队的颜色染色，
-              所以每帧切成两张：*_body（白衣服白帽子，灰度）和 *_top（脸、手、鞋、描边，不染色）
-  train.png   车头、空车厢
-  props.png   小桥、草丛两种、小花、灌木、小石子（3×2 排）
+  walk.png   小人空手走路：4 列 × 3 行（正面、侧面朝右、背面各 4 帧）
+  carry.png  小人双手举过头走路（举着豆）：同样 4 列 × 3 行
+             帽子和衣服是白的，局内按小队的颜色染色，所以每帧切成两张：
+             kit/wk_<姿势>_<帧>b（白衣帽，染色）和 kit/wk_<姿势>_<帧>t（脸、手、鞋，不染色）；
+             姿势 f 正面（往下走）/ s 侧面（朝右）/ b 背面（往上走），举着豆的前面加 c（cf、cs、cb）
+  train.png  车头、空车厢
+  boat.png   小船（上场位）、睡莲、芦苇、涟漪圈（2×2 排）
+  props.png  小桥（已不用，跳过）、草丛两种、小花、灌木、小石子（3×2 排）
 
 去底：背景是纯品红，按「有多品红」算透明度再把颜色还原（不是硬阈值，边缘不出锯齿和粉边，docs/03 第 5 节）。
-用法：python3 client/tools/art/sprites.py，然后 ./run.sh art-compress、./run.sh meta
+用法：python3 client/tools/art/sprites.py [walk carry train boat props]，然后 ./run.sh art-compress、./run.sh meta
 依赖：numpy、Pillow
 """
 import sys
@@ -101,32 +105,62 @@ def crop(a: np.ndarray, b: tuple[int, int, int, int]) -> np.ndarray:
     return a[b[1] : b[3], b[0] : b[2]]
 
 
-def worker() -> None:
-    a = unkey(RAW / 'worker.png')
-    bs = rows(boxes(a[..., 3]))
-    if len(bs) != 4:
-        raise SystemExit(f'worker.png 里要 4 个小人，认出来 {len(bs)} 个')
-    # 四帧放进一样大的画布：底边对齐、左右居中
-    W = max(b[2] - b[0] for b in bs)
-    H = max(b[3] - b[1] for b in bs)
-    for i, b in enumerate(bs):
-        c = crop(a, b)
-        canvas = np.zeros((H, W, 4))
-        x = (W - c.shape[1]) // 2
-        canvas[H - c.shape[0] :, x : x + c.shape[1]] = c
-        rgb, alpha = canvas[..., :3], canvas[..., 3]
-        mx, mn = rgb.max(-1), rgb.min(-1)
-        sat = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0)
-        # 白衣服白帽子：不带颜色、够亮。其余（脸、手、鞋、描边）不染色
-        cloth = (sat < 0.2) & (mx > 0.5)
-        body = np.zeros_like(canvas)
-        v = np.clip(mx / 0.97, 0, 1)
-        body[..., 0] = body[..., 1] = body[..., 2] = v
-        body[..., 3] = alpha * cloth
-        top = canvas.copy()
-        top[..., 3] = alpha * ~cloth
-        save(body, f'worker_body_{i}', 48)
-        save(top, f'worker_top_{i}', 48)
+def split_cloth(canvas: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """一帧切成两张：白衣帽（灰度，局内染色）和不染色的部分"""
+    rgb, alpha = canvas[..., :3], canvas[..., 3]
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    sat = np.where(mx > 1e-6, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    cloth = (sat < 0.2) & (mx > 0.5)
+    body = np.zeros_like(canvas)
+    v = np.clip(mx / 0.97, 0, 1)
+    body[..., 0] = body[..., 1] = body[..., 2] = v
+    body[..., 3] = alpha * cloth
+    top = canvas.copy()
+    top[..., 3] = alpha * ~cloth
+    return body, top
+
+
+def sheet12(file: str, poses: tuple[str, str, str]) -> None:
+    """4 列 × 3 行的小人图：一行一个方向，行内 4 帧。每行用同一块画布（底边对齐、左右居中）"""
+    a = unkey(RAW / file)
+    bs = rows(boxes(a[..., 3], 2500))
+    if len(bs) != 12:
+        raise SystemExit(f'{file} 里要 12 个小人（4 列 × 3 行），认出来 {len(bs)} 个')
+    for r, pose in enumerate(poses):
+        frames = bs[r * 4 : (r + 1) * 4]
+        W = max(b[2] - b[0] for b in frames)
+        H = max(b[3] - b[1] for b in frames)
+        for i, b in enumerate(frames):
+            c = crop(a, b)
+            canvas = np.zeros((H, W, 4))
+            x = (W - c.shape[1]) // 2
+            canvas[H - c.shape[0] :, x : x + c.shape[1]] = c
+            body, top = split_cloth(canvas)
+            save(body, f'wk_{pose}_{i}b', 48)
+            save(top, f'wk_{pose}_{i}t', 48)
+
+
+def walk() -> None:
+    sheet12('walk.png', ('f', 's', 'b'))
+
+
+def carry() -> None:
+    sheet12('carry.png', ('cf', 'cs', 'cb'))
+
+
+def boat() -> None:
+    a = unkey(RAW / 'boat.png')
+    bs = rows(boxes(a[..., 3], 1500))
+    names = [('boat', 0), ('deco_lily', 30), ('deco_reed', 40), ('ripple', 36)]
+    if len(bs) != len(names):
+        raise SystemExit(f'boat.png 里要 {len(names)} 个东西，认出来 {len(bs)} 个')
+    # 船最大：按面积挑出来放第一个
+    bs.sort(key=lambda b: -(b[2] - b[0]) * (b[3] - b[1]))
+    big, rest = bs[0], rows(bs[1:])
+    for b, (name, h) in zip([big] + rest, names):
+        save(crop(a, b), name, h or (b[3] - b[1]) * 66 / max(1, b[3] - b[1]))
+    # 船另存：按显示 66 高
+    save(crop(a, big), 'boat', 66)
 
 
 def train() -> None:
@@ -148,17 +182,18 @@ def train() -> None:
 def props() -> None:
     a = unkey(RAW / 'props.png')
     bs = rows(boxes(a[..., 3], 1500))
-    names = [('bridge', 150), ('deco_tuft1', 26), ('deco_tuft2', 26), ('deco_flower', 34), ('deco_bush', 46), ('deco_pebble', 16)]
+    names = [(None, 0), ('deco_tuft1', 26), ('deco_tuft2', 26), ('deco_flower', 34), ('deco_bush', 46), ('deco_pebble', 16)]
     if len(bs) != len(names):
         raise SystemExit(f'props.png 里要 {len(names)} 个东西，认出来 {len(bs)} 个')
     for b, (name, h) in zip(bs, names):
-        save(crop(a, b), name, h)
+        if name:
+            save(crop(a, b), name, h)
 
 
 # 车厢图从上往下多少比例是斗口（看图定的）
 WAGON_RIM = 0.30
 
 if __name__ == '__main__':
-    which = sys.argv[1:] or ['worker', 'train', 'props']
+    which = sys.argv[1:] or ['walk', 'carry', 'train', 'boat', 'props']
     for k in which:
-        {'worker': worker, 'train': train, 'props': props}[k]()
+        {'walk': walk, 'carry': carry, 'train': train, 'boat': boat, 'props': props}[k]()

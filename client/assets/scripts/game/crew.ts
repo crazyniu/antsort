@@ -1,15 +1,19 @@
-// 小人（docs/01 第 3 节）：从上场的方块里跑出来 → 过小桥 → 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
-// → 绕回铁轨边放进车厢。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
+// 小人（docs/01 第 3 节）：从船上的方块里跳上岸 → 沿着画四周的路绕到离那颗豆最近的一边 → 走进去抱起豆
+// → 绕到画上面、走到车厢边放进火车。只是表现：搬哪颗、谁先搬都是规则算好的（局内页面把一颗颗「活」排进来），这里只管什么时候出发、怎么走。
 // 出发的先后要守住一条：后一轮才露出来的豆，不能比前一轮的豆先被搬走（不然看着像是从里面掏的）。
+// 动画：正面（往下走）、侧面（朝右，往左翻转）、背面（往上走）各 4 帧，空手一套、举着豆一套（kit/wk_*，tools/art/sprites.py 切的）。
 import { Color, Node, Sprite, SpriteFrame, Vec3 } from 'cc';
 import { at, box, img, size } from '../ui/kit';
 import { frame } from '../ui/res';
 import type { CarView } from './station';
 import type { Drop, Train } from './train';
 
-/** 小人显示多高（kit/worker_body_0..3 / worker_top_0..3：走路两帧、举着手走两帧）、手里的豆多大 */
+/** 小人显示多高、手里的豆多大 */
 const H = 48;
 const CUBE = 18;
+/** 姿势：f 正面、s 侧面、b 背面；前面加 c 是举着豆的 */
+const POSES = ['f', 's', 'b', 'cf', 'cs', 'cb'] as const;
+type Pose = (typeof POSES)[number];
 
 export interface Job {
   car: CarView;
@@ -24,15 +28,12 @@ export interface Job {
 
 /** 场地的几何（特效层的坐标） */
 export interface Field {
-  /** 画四周那圈路的中线：左、右、下、上 */
+  /** 画四周那圈路的中线：左、右、下（河岸）、上（铁轨下面那条） */
   l: number;
   r: number;
   b: number;
   t: number;
-  /** 小桥的中线、上场位和铁轨之间那条小路的高度 */
-  bridgeX: number;
-  laneY: number;
-  /** 方块现在在哪里 */
+  /** 方块现在在哪里（船上） */
   carPos: (car: CarView) => Vec3;
 }
 
@@ -51,8 +52,11 @@ interface Walker {
   ox: number;
   oy: number;
   step: number;
-  /** 现在显示的是第几帧（-1 = 还没定） */
-  fi: number;
+  /** 最近一步在往哪边走（定用哪一面的帧） */
+  mdx: number;
+  mdy: number;
+  /** 现在显示的是哪一帧（姿势_帧号，'' = 还没定） */
+  shown: string;
 }
 
 export class Crew {
@@ -69,9 +73,8 @@ export class Crew {
   private prevDone = 0;
   /** 小人的时间（秒，按倍速走） */
   now = 0;
-  private bodyF: SpriteFrame[] = [];
-  private topF: SpriteFrame[] = [];
-  private w = H;
+  /** 每个姿势的 4 帧（body 染色、top 不染）和显示宽度 */
+  private frames = new Map<Pose, { b: SpriteFrame; t: SpriteFrame; w: number }[]>();
 
   constructor(
     layer: Node,
@@ -85,16 +88,15 @@ export class Crew {
     this.bodyL = box('bodies', layer);
     this.topL = box('tops', layer);
     this.cubeL = box('cubes', layer);
-    for (let i = 0; i < 4; i++) {
-      const b = frame(`kit/worker_body_${i}`);
-      const p = frame(`kit/worker_top_${i}`);
-      if (b && p) {
-        this.bodyF.push(b);
-        this.topF.push(p);
+    for (const pose of POSES) {
+      const list: { b: SpriteFrame; t: SpriteFrame; w: number }[] = [];
+      for (let i = 0; i < 4; i++) {
+        const b = frame(`kit/wk_${pose}_${i}b`);
+        const t = frame(`kit/wk_${pose}_${i}t`);
+        if (b && t) list.push({ b, t, w: (H * b.originalSize.width) / b.originalSize.height });
       }
+      if (list.length > 0) this.frames.set(pose, list);
     }
-    const s = this.bodyF[0]?.originalSize;
-    if (s) this.w = (H * s.width) / s.height;
   }
 
   /** 排进一颗要搬的豆（按批号从小到大排进来） */
@@ -180,28 +182,23 @@ export class Crew {
     return out;
   }
 
-  /** 桥头：小桥上到那圈路的地方 */
-  private bridgeTop(): Vec3 {
-    return new Vec3(this.field.bridgeX, this.field.b, 0);
-  }
-
-  /** 去搬一颗豆的整条路 */
+  /** 去搬一颗豆的整条路：从船上跳上岸（正上方的河岸路），沿路绕到进入点，走进去 */
   private routeOut(job: Job): Vec3[] {
     const f = this.field;
     const from = f.carPos(job.car);
-    const pts: Vec3[] = [new Vec3(from.x, from.y + 30, 0), new Vec3(from.x, f.laneY, 0), new Vec3(f.bridgeX, f.laneY, 0), this.bridgeTop()];
-    const entry = job.inside[0];
-    pts.push(...this.ring(this.bridgeTop(), entry));
+    const bank = new Vec3(Math.min(f.r, Math.max(f.l, from.x)), f.b, 0);
+    const pts: Vec3[] = [new Vec3(from.x, from.y + 26, 0), bank];
+    pts.push(...this.ring(bank, job.inside[0]));
     for (let i = 1; i < job.inside.length; i++) pts.push(job.inside[i]);
     return pts;
   }
 
-  /** 抱着豆回火车的路：原路退到那圈路上，绕到车厢上面，下去 */
+  /** 抱着豆去火车的路：原路退到那圈路上，绕到画上面车厢那一格，再往上走到车厢边 */
   private routeBack(job: Job, d: Drop): Vec3[] {
     const pts: Vec3[] = [];
     for (let i = job.inside.length - 2; i >= 0; i--) pts.push(job.inside[i]);
-    const above = new Vec3(d.x, this.field.b, 0);
-    pts.push(...this.ring(job.inside[0], above));
+    const below = new Vec3(Math.min(this.field.r, Math.max(this.field.l, d.x)), this.field.t, 0);
+    pts.push(...this.ring(job.inside[0], below));
     pts.push(new Vec3(d.x, d.y, 0));
     return pts;
   }
@@ -226,13 +223,15 @@ export class Crew {
         if (w.drop && this.train.ready(w.drop.train)) {
           this.train.drop(w.drop, w.job.color);
           this.free(i);
+        } else {
+          this.draw(w, step);
         }
         continue;
       }
       this.move(w, v);
       if (w.seg >= w.pts.length - 1) {
         if (w.phase === 0) {
-          // 到豆旁边了：抱起来，定好放在哪节车厢，往回走
+          // 到豆旁边了：抱起来，定好放在哪节车厢，往火车走
           this.onPick(w.job);
           w.cube.active = true;
           w.drop = this.train.reserve();
@@ -241,6 +240,8 @@ export class Crew {
           w.phase = 1;
         } else {
           w.phase = 2;
+          w.mdx = 0;
+          w.mdy = 1;
         }
       }
       this.draw(w, step);
@@ -253,6 +254,10 @@ export class Crew {
       const dx = to.x - w.x;
       const dy = to.y - w.y;
       const d = Math.hypot(dx, dy);
+      if (d > 0.01) {
+        w.mdx = dx / d;
+        w.mdy = dy / d;
+      }
       if (d <= dist) {
         w.x = to.x;
         w.y = to.y;
@@ -261,32 +266,40 @@ export class Crew {
       } else {
         w.x += (dx / d) * dist;
         w.y += (dy / d) * dist;
-        if (Math.abs(dx) > 0.5) w.body.setScale(dx < 0 ? -1 : 1, 1, 1);
         dist = 0;
       }
     }
   }
 
-  /** 摆到位置上：走路时左右晃、上下颠 */
+  /** 摆到位置上：按走的方向挑正面 / 侧面 / 背面，按走的节奏换帧 */
   private draw(w: Walker, step: number): void {
-    w.step += step * 13;
-    // 两帧换着来就是迈步；抱着豆的时候用举着手的那两帧。站着等的不动
+    w.step += step * 11;
     const walking = w.phase !== 2;
-    const fi = (w.cube.active ? 2 : 0) + (walking ? Math.floor(w.step / Math.PI) % 2 : 0);
-    if (fi !== w.fi) {
-      w.fi = fi;
-      (w.body.getComponent(Sprite) as Sprite).spriteFrame = this.bodyF[fi] ?? null;
-      (w.top.getComponent(Sprite) as Sprite).spriteFrame = this.topF[fi] ?? null;
-      size(w.body, this.w, H);
-      size(w.top, this.w, H);
+    // 往上走是背面，往下走是正面，左右是侧面（往左翻转）
+    const side = Math.abs(w.mdx) > Math.abs(w.mdy);
+    const dir: Pose = side ? 's' : w.mdy > 0 ? 'b' : 'f';
+    const pose = (w.cube.active ? `c${dir}` : dir) as Pose;
+    const list = this.frames.get(pose);
+    if (!list || list.length === 0) return;
+    const fi = walking ? Math.floor(w.step / (Math.PI / 2)) % list.length : 0;
+    const key = `${pose}_${fi}`;
+    if (key !== w.shown) {
+      w.shown = key;
+      const f = list[fi];
+      (w.body.getComponent(Sprite) as Sprite).spriteFrame = f.b;
+      (w.top.getComponent(Sprite) as Sprite).spriteFrame = f.t;
+      size(w.body, f.w, H);
+      size(w.top, f.w, H);
     }
-    const hop = walking ? Math.abs(Math.sin(w.step)) * 2.5 : 0;
+    const flip = side && w.mdx < 0 ? -1 : 1;
+    w.body.setScale(flip, 1, 1);
+    w.top.setScale(flip, 1, 1);
+    const hop = walking ? Math.abs(Math.sin(w.step)) * 2 : 0;
     const x = w.x + w.ox;
     const y = w.y + w.oy + hop;
     at(w.body, x, y + H * 0.34);
     at(w.top, x, y + H * 0.34);
-    w.top.setScale(w.body.scale.x, 1, 1);
-    if (w.cube.active) at(w.cube, x, y + H * 0.34 + H * 0.56);
+    if (w.cube.active) at(w.cube, x, y + H * 0.34 + H * 0.52);
   }
 
   /** 该出发的出发：每个方块隔 gap 秒放一个；后一批的要等前一批都出发了，而且不能比前一批先到 */
@@ -329,8 +342,8 @@ export class Crew {
     let w = this.pool.pop();
     if (!w) {
       w = {
-        body: img(this.bodyL, 'kit/worker_body_0', this.w, H, 'w'),
-        top: img(this.topL, 'kit/worker_top_0', this.w, H, 'w'),
+        body: img(this.bodyL, 'kit/wk_b_0b', undefined, H, 'w'),
+        top: img(this.topL, 'kit/wk_b_0t', undefined, H, 'w'),
         cube: img(this.cubeL, 'kit/bead', CUBE, CUBE * 1.25, 'c'),
         job,
         pts,
@@ -342,7 +355,9 @@ export class Crew {
         ox: 0,
         oy: 0,
         step: 0,
-        fi: 0,
+        mdx: 0,
+        mdy: 1,
+        shown: '',
       };
     }
     w.job = job;
@@ -353,9 +368,11 @@ export class Crew {
     w.phase = 0;
     w.drop = null;
     w.ox = (Math.random() - 0.5) * 14;
-    w.oy = (Math.random() - 0.5) * 14;
+    w.oy = (Math.random() - 0.5) * 10;
     w.step = Math.random() * 6;
-    w.fi = -1;
+    w.mdx = 0;
+    w.mdy = 1;
+    w.shown = '';
     const col = this.colors[job.color] ?? Color.WHITE;
     (w.body.getComponent(Sprite) as Sprite).color = col;
     (w.cube.getComponent(Sprite) as Sprite).color = col;
@@ -363,6 +380,7 @@ export class Crew {
     w.top.active = true;
     w.cube.active = false;
     w.body.setScale(1, 1, 1);
+    w.top.setScale(1, 1, 1);
     this.walkers.push(w);
     this.draw(w, 0);
   }

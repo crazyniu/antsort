@@ -151,7 +151,8 @@ export class Train {
     const k = Math.floor(r / this.cap);
     const inTrain = r % this.cap;
     const wagon = Math.min(this.wagonCount - 1, Math.floor(inTrain / this.perWagon));
-    return { train: k, wagon, index: inTrain % this.perWagon, x: this.homeX() + this.wagonX(wagon), y: this.y + WAGON_H + 6 };
+    // 火车在画的上面：小人站在铁轨下沿放豆
+    return { train: k, wagon, index: inTrain % this.perWagon, x: this.homeX() + this.wagonX(wagon), y: this.y - 26 };
   }
 
   /** 第 k 列停稳了、可以放吗 */

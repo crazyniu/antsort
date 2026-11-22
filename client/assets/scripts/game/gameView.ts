@@ -6,7 +6,6 @@ import { Color, Director, Label, Node, Sprite, Tween, UITransform, Vec3, directo
 import { Combo } from '../core/meta/combo';
 import * as Skills from '../core/meta/skills';
 import * as Meta from '../core/meta/meta';
-import * as Chapters from '../core/meta/chapters';
 import type { DigLevel } from '../core/dig/level';
 import * as Rules from '../core/dig/rules';
 import { GameState, Status } from '../core/dig/rules';
@@ -16,7 +15,7 @@ import { App } from '../services/app';
 import { buzz, sfx } from '../services/audio';
 import * as fx from '../ui/fx';
 import { language, tr } from '../ui/i18n';
-import { artNumber, at, blockInput, box, Capsule, capsule, COLOR, fit, fxImg, iconButton, img, keyButton, lazyImg, onTap, opacity, recycleFx, resizeSlice, slice, text, textWidth, tint } from '../ui/kit';
+import { artNumber, at, blockInput, box, Capsule, capsule, COLOR, fit, fxImg, iconButton, img, keyButton, onTap, opacity, recycleFx, resizeSlice, slice, text, textWidth, tint } from '../ui/kit';
 import { Screen } from '../ui/screen';
 import { gameFrames, loadFrames } from '../ui/res';
 import { popupCount } from '../ui/popup';
@@ -64,8 +63,11 @@ const PATH_W = 38;
 const GRASS = new Color(140, 211, 106, 255);
 const GRASS_IN = new Color(154, 220, 120, 255);
 const SAND = new Color(244, 222, 164, 255);
-/** 小桥的图宽 ÷ 高 */
-const BRIDGE_ASPECT = 0.82;
+/** 小河多高；水的三个颜色（深、中、亮） */
+const RIVER_H = 150;
+const WATER_DEEP = new Color(44, 148, 212, 255);
+const WATER = new Color(72, 186, 241, 255);
+const WATER_LIGHT = new Color(176, 228, 255, 255);
 /** 草地上的小摆设：[图, 显示多高] */
 const DECO: [string, number][] = [
   ['kit/deco_tuft1', 24],
@@ -74,6 +76,7 @@ const DECO: [string, number][] = [
   ['kit/deco_bush', 42],
   ['kit/deco_pebble', 14],
   ['kit/deco_tuft1', 22],
+  ['kit/deco_flower', 30],
 ];
 /** 倍速开关：开着就一直开着，换关不重置 */
 let fast = false;
@@ -304,11 +307,8 @@ export class GamePage extends Page {
     this.praiseNode = null;
     this.kindBannerNode = null;
     const eco = App.config.eco;
-    // 背景：按章节换（bg/chapter_<id>），没配章节就用主页背景
-    const chs = Chapters.list(eco);
-    const ch = chs.length ? `bg/chapter_${chs[Chapters.forLevel(eco, Meta.levelFile(this.arg.level, App.config.levelCount))].id}` : 'bg/home';
-    const bgH = Math.max(Screen.H, Screen.W * 1.5);
-    lazyImg(this.bg, ch, (bgH * 1024) / 1536, bgH);
+    // 背景：整屏一片草地（docs/01 第 3 节的场景，一整个俯视的室外场景，不分块）
+    tint(this.bg, Screen.W, Screen.H + 40, GRASS, 'grass');
 
     // ---- 顶栏：微信小游戏（有胶囊）挪到胶囊那一行，设置键在最左；App 设置键在最右。关卡号居中，限时关中间换成倒计时
     const hudY = Screen.cap ? Screen.headY : Screen.top - (Screen.notchTop > 0 ? 33 + 8 : 52);
@@ -346,16 +346,15 @@ export class GamePage extends Page {
     const ids = Skills.ids(eco);
     ids.forEach((sid, i) => this.buildSkill(sid, (i - (ids.length - 1) / 2) * (SKILL_S + SKILL_GAP), skillY));
 
-    // ---- 排队区：技能栏上面；上场位：排队区上面；再往上是小人走的小路、铁轨（玩法）
-    const trackTop = skillY + SKILL_S / 2 + 30 + Station.trackHeight();
-    this.stationY = trackTop + 14 + Station.padHeight() / 2;
-    const laneY = this.stationY + Station.padHeight() / 2 + 20;
-    const railY = laneY + 22;
-    /** 画四周那圈路最下面一段的中线：正好在车厢上面 */
-    const ringB = railY + 100;
+    // ---- 版式（玩法，docs/01 第 3 节）：从上到下 顶栏 → 铁轨和火车 → 拼豆画（四周一圈路）→ 小河（船 = 上场位）→ 河对岸的排队区 → 技能栏
+    const railY = hudY - h / 2 - 118;
+    const trackTop = skillY + SKILL_S / 2 + 26 + Station.trackHeight();
+    const riverC = trackTop + 30 + RIVER_H / 2;
+    this.stationY = riverC - 2;
+    const riverTop = riverC + RIVER_H / 2;
 
     // ---- 连击计（底座的，这款游戏不出）
-    this.comboY = laneY;
+    this.comboY = riverTop;
     this.comboRow = box('combo', this.fly, 420, 120);
     at(this.comboRow, 0, this.comboY);
     this.comboBadge = box('badge', this.comboRow, 420, 120);
@@ -381,46 +380,59 @@ export class GamePage extends Page {
     this.feverRays = img(this.under, 'kit/fx_rays', raysS, raysS, 'rays');
     opacity(this.feverRays).opacity = 0;
 
-    // ---- 像素画：顶栏和火车之间的全部高度，四周留一圈路；画贴着下面放，路的最下面一段正好在车厢上面（玩法）
-    this.fieldTop = hudY - h / 2 - 12;
-    this.fieldBottom = laneY - PATH_W / 2;
-    at(this.feverRays, 0, (this.fieldTop + this.fieldBottom) / 2);
+    // ---- 拼豆画：铁轨和小河之间的全部高度，四周留一圈路，上下居中（玩法）
+    const fB0 = riverTop + PATH_W / 2 - 6;
+    const fT0 = railY - 54;
     const maxW = Screen.W - 2 * (PATH_OUT + PATH_W / 2 + 14);
-    const maxH = this.fieldTop - PATH_W / 2 - 4 - ringB - 2 * PATH_OUT;
+    const maxH = fT0 - fB0 - 2 * PATH_OUT;
     const holder = box('fieldHolder', this.stage, maxW, maxH);
     this.board = new Board(holder, maxW, maxH, this.lv);
     const bw = this.board.width;
     const bh = this.board.height;
-    const by = ringB + PATH_OUT + bh / 2;
+    const by = (fB0 + fT0) / 2;
     at(holder, 0, by);
     this.boardAt.set(0, by, 0);
     this.field = {
       l: -bw / 2 - PATH_OUT,
       r: bw / 2 + PATH_OUT,
-      b: ringB,
+      b: by - bh / 2 - PATH_OUT,
       t: by + bh / 2 + PATH_OUT,
-      bridgeX: -Screen.W / 2 + 58,
-      laneY,
       carPos: (car) => car.node.position,
     };
-    // 草地、沙子路（垫在最下面）
+    this.fieldTop = this.field.t;
+    this.fieldBottom = this.field.b;
+    at(this.feverRays, 0, by);
+    // ---- 地面（垫在最下面）：那圈路、铁轨路基、河岸、排队区的沙地，和画左右接上下的小路
     const f = this.field;
     const ground = box('ground', this.under);
     ground.setSiblingIndex(0);
-    at(tint(ground, Screen.W, this.fieldTop + 8 - this.fieldBottom, GRASS, 'grass'), 0, (this.fieldTop + 8 + this.fieldBottom) / 2);
     const paint = (n: Node, c: Color): void => {
       (n.getChildByName('skin')?.getComponent(Sprite) as Sprite).color = c;
     };
+    at(tint(ground, Screen.W, 40, SAND, 'railbed'), 0, railY + 8);
     const ring = slice(ground, 'kit/round_white', f.r - f.l + PATH_W, f.t - f.b + PATH_W, 'ring');
     at(ring, 0, (f.t + f.b) / 2);
     paint(ring, SAND);
     const inner = slice(ground, 'kit/round_white', f.r - f.l - PATH_W, f.t - f.b - PATH_W, 'inner');
     at(inner, 0, (f.t + f.b) / 2);
     paint(inner, GRASS_IN);
-    // 上场位和铁轨之间的小路、桥头接到那圈路上的一段
-    at(tint(ground, Screen.W, PATH_W, SAND, 'lane'), 0, laneY);
-    if (f.bridgeX < f.l) at(tint(ground, f.l - f.bridgeX + PATH_W, PATH_W, SAND, 'link'), (f.l + f.bridgeX) / 2, f.b);
+    for (const sx of [-1, 1]) {
+      // 往上接到路基、往下接到河岸的小路
+      at(tint(ground, 44, railY - f.t + PATH_W, SAND, 'up'), (sx * (f.r - f.l)) / 4, (railY + f.t) / 2);
+      const dh = f.b - riverTop + PATH_W / 2;
+      if (dh > 10) at(tint(ground, 44, dh, SAND, 'down'), (sx * (f.r - f.l)) / 4, (f.b - PATH_W / 2 + riverTop) / 2 + 6);
+    }
+    // ---- 小河：水面是活的（流光、涟漪、睡莲、芦苇）
+    this.river(ground, riverC);
+    // 两边的河岸
+    at(tint(ground, Screen.W, 22, SAND, 'bankT'), 0, riverTop + 9);
+    at(tint(ground, Screen.W, 22, SAND, 'bankB'), 0, riverC - RIVER_H / 2 - 9);
+    // 排队区的沙地
+    const patch = slice(ground, 'kit/round_white', 486, Station.trackHeight() + 40, 'patch');
+    at(patch, 0, trackTop - Station.trackHeight() / 2 + 6);
+    paint(patch, SAND);
     this.board.build(this.s, intro, App.config.ui.intro.stagger);
+
     // ---- 铁轨、火车、小桥
     const cfg = App.config.ui.dig;
     const tc = App.config.levels.train;
@@ -439,10 +451,7 @@ export class GamePage extends Page {
       this.lastDropSfx = this.vnow;
       sfx('bowl', 0, 0.3);
     });
-    // 小桥：跨过铁轨，桥面的两头接着下面的小路和上面那圈路
-    const bridgeH = ringB - laneY + PATH_W + 6;
-    at(img(this.stage, 'kit/bridge', bridgeH * BRIDGE_ASPECT, bridgeH, 'bridge'), f.bridgeX, (ringB + laneY) / 2);
-    this.decorate(ground);
+    this.decorate(ground, trackTop);
     // ---- 上场位、排队区、已经在场上的方块（复活后重画）
     this.station = new Station(
       this.stage,
@@ -469,9 +478,9 @@ export class GamePage extends Page {
         this.station.bump(job.car, 0.035);
       },
     );
-    // ---- 倍速开关：排队区右边
+    // ---- 倍速开关：排队区沙地右边的草地上
     const sp = slice(this.stage, 'kit/capsule', 84, 50, 'speed');
-    at(sp, Screen.W / 2 - 20 - 42, trackTop - 36);
+    at(sp, Screen.W / 2 - 20 - 42, trackTop - 20);
     this.speedLabel = text(sp, '', 28);
     onTap(sp, () => {
       fast = !fast;
@@ -486,14 +495,15 @@ export class GamePage extends Page {
     if (this.speedLabel) this.speedLabel.string = `×${this.speed}`;
   }
 
-  /** 草地上撒几样小摆设：只放在那圈路外面的空地上（左右两条、上面一条），位置按关卡号定，同一关每次都一样 */
-  private decorate(ground: Node): void {
+  /** 草地上撒几样小摆设：那圈路外面的空地、排队区沙地两边，位置按关卡号定，同一关每次都一样 */
+  private decorate(ground: Node, trackTop: number): void {
     const f = this.field;
     const rng = new Rng(this.lv.id * 7919 + 17);
     const zones: [number, number, number, number][] = [
-      [-Screen.W / 2 + 14, f.l - PATH_W / 2 - 16, f.b + 70, f.t + 10],
-      [f.r + PATH_W / 2 + 16, Screen.W / 2 - 14, f.b + 110, f.t + 10],
-      [-Screen.W / 2 + 20, Screen.W / 2 - 20, f.t + PATH_W / 2 + 16, this.fieldTop - 12],
+      [-Screen.W / 2 + 14, f.l - PATH_W / 2 - 16, f.b + 60, f.t - 10],
+      [f.r + PATH_W / 2 + 16, Screen.W / 2 - 14, f.b + 60, f.t - 10],
+      [-Screen.W / 2 + 16, -268, trackTop - 244, trackTop - 20],
+      [268, Screen.W / 2 - 16, trackTop - 244, trackTop - 70],
     ];
     for (const [x0, x1, y0, y1] of zones) {
       if (x1 - x0 < 24 || y1 - y0 < 24) continue;
@@ -502,6 +512,64 @@ export class GamePage extends Page {
         const [path, h] = DECO[Math.floor(rng.randf() * DECO.length) % DECO.length];
         at(img(ground, path, undefined, h, 'deco'), x0 + rng.randf() * (x1 - x0), y0 + rng.randf() * (y1 - y0));
       }
+    }
+  }
+
+  /** 小河（玩法，docs/01 第 3 节）：深浅两层水、岸线亮边；流光慢慢往右漂，水面不时冒一圈涟漪；两头点缀睡莲和芦苇 */
+  private river(ground: Node, riverC: number): void {
+    const paint = (n: Node, c: Color): void => {
+      (n.getChildByName('skin')?.getComponent(Sprite) as Sprite).color = c;
+    };
+    const river = box('river', ground);
+    at(tint(river, Screen.W, RIVER_H, WATER_DEEP, 'deep'), 0, riverC);
+    at(tint(river, Screen.W, RIVER_H - 22, WATER, 'mid'), 0, riverC);
+    for (const sy of [-1, 1]) at(tint(river, Screen.W, 4, WATER_LIGHT, 'edge'), 0, riverC + (sy * (RIVER_H - 26)) / 2);
+    // 流光：圆头短亮条往右漂，漂一程淡出、回到起点再来（和豆的位置无关，纯装饰）
+    const rng = new Rng(this.lv.id * 131 + 7);
+    for (let i = 0; i < 8; i++) {
+      const g = slice(river, 'kit/round_white', 44 + rng.randf() * 64, 9, 'glint');
+      paint(g, WATER_LIGHT);
+      const op = opacity(g);
+      op.opacity = 0;
+      const gx = -Screen.W / 2 + rng.randf() * Screen.W;
+      const gy = riverC + (rng.randf() - 0.5) * (RIVER_H - 52);
+      at(g, gx, gy);
+      const dur = 4.5 + rng.randf() * 3.5;
+      const drift = 110 + rng.randf() * 90;
+      tween(g)
+        .repeatForever(tween(g).by(dur, { position: new Vec3(drift, 0, 0) }).call(() => at(g, gx, gy)))
+        .start();
+      tween(op)
+        .repeatForever(tween(op).to(dur * 0.35, { opacity: 110 }).delay(dur * 0.3).to(dur * 0.35, { opacity: 0 }))
+        .start();
+    }
+    // 涟漪：不时冒一圈，放大、淡出
+    const ripples = box('ripples', river);
+    const pop = (): void => {
+      if (!ripples.isValid || !this.stage.activeInHierarchy) {
+        if (ripples.isValid) fx.delay(ripples, 1, pop);
+        return;
+      }
+      const n = img(ripples, 'kit/ripple', 22, 22, 'r');
+      at(n, -Screen.W / 2 + 30 + Math.random() * (Screen.W - 60), riverC + (Math.random() - 0.5) * (RIVER_H - 70));
+      const op = opacity(n);
+      op.opacity = 0;
+      tween(op).to(0.3, { opacity: 130 }).delay(0.25).to(0.6, { opacity: 0 }).start();
+      tween(n)
+        .to(1.2, { scale: new Vec3(2.1, 2.1, 1) })
+        .call(() => n.destroy())
+        .start();
+      fx.delay(ripples, 0.5 + Math.random() * 1.0, pop);
+    };
+    fx.delay(ripples, 0.4, pop);
+    // 睡莲、芦苇：河两头（船占着中间）
+    for (const sx of [-1, 1]) {
+      const lily = img(river, 'kit/deco_lily', undefined, 30, 'lily');
+      at(lily, sx * (Screen.W / 2 - 22), riverC + (sx > 0 ? -34 : 30));
+      fx.bob(lily, 3, 2.6, sx > 0 ? 1.1 : 0);
+      const reed = img(river, 'kit/deco_reed', undefined, 40, 'reed');
+      at(reed, sx * (Screen.W / 2 - 30), riverC + (sx > 0 ? RIVER_H / 2 - 6 : -RIVER_H / 2 + 8));
+      fx.bob(reed, 2, 3.1, sx > 0 ? 0.4 : 1.6);
     }
   }
 

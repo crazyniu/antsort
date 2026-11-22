@@ -501,8 +501,8 @@ export class HomePage extends Page {
       const w = box('worker', root, 40, 48);
       at(w, i === 0 ? -152 : 152, y + 26);
       w.setScale(i === 0 ? 1 : -1, 1, 1);
-      (img(w, 'kit/worker_body_0', undefined, 48, 'body').getComponent(Sprite) as Sprite).color = hex(c);
-      img(w, 'kit/worker_top_0', undefined, 48, 'top');
+      (img(w, 'kit/wk_s_0b', undefined, 48, 'body').getComponent(Sprite) as Sprite).color = hex(c);
+      img(w, 'kit/wk_s_0t', undefined, 48, 'top');
       fx.bob(w, 4, 0.9, i * 0.4);
     });
     fx.popIn(root, 0, 0.3, root.scale.x);

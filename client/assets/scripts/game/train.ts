@@ -8,9 +8,10 @@ const LOCO_W = 130;
 const LOCO_H = 96;
 const WAGON_W = 105;
 const WAGON_H = 66;
-/** 车厢里一排放几颗小方块、每颗多大 */
-const COLS = 4;
-const CUBE = 19;
+/** 车厢里一排放几颗小方块、每颗多大、一排比一排高多少 */
+const COLS = 5;
+const CUBE = 17;
+const ROW_LIFT = 7;
 
 export interface Drop {
   /** 第几列火车 */
@@ -170,9 +171,9 @@ export class Train {
       const row = Math.floor(d.index / COLS);
       const cube = img(w.cubes, 'kit/bead', CUBE, CUBE * 1.25, 'cube');
       (cube.getComponent(Sprite) as Sprite).color = this.colors[color] ?? Color.WHITE;
-      const x = (col - (COLS - 1) / 2) * (CUBE + 2);
-      // 第一排大半截藏在前挡板后面，往上一排排码出斗口
-      const y = 11 + row * (CUBE * 0.56);
+      const x = (col - (COLS - 1) / 2) * (CUBE + 1);
+      // 第一排大半截藏在前挡板后面，往上一排排码到斗口
+      const y = 2 + row * ROW_LIFT;
       // 从上往下数：后放的在上面一排，要画在下面一排的后面（下面一排盖住它的侧面）
       cube.setSiblingIndex(0);
       at(cube, x, y + 16);

@@ -58,7 +58,7 @@ const SKILL_GAP = 28;
 const BADGE_W = 42;
 const BADGE_H = 36;
 /** 画四周那圈路：中线离画多远、路多宽；草地和沙子路的颜色 */
-const PATH_OUT = 24;
+const PATH_OUT = 30;
 const PATH_W = 38;
 const GRASS = new Color(140, 211, 106, 255);
 const GRASS_IN = new Color(154, 220, 120, 255);

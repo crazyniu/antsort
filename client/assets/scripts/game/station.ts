@@ -12,8 +12,8 @@ export const CAR_W = 100;
 export const CAR_H = Math.round(CAR_W / 1.136);
 /** 托盘：多高、一格最宽多宽、方块在格子里缩到格宽的多少、四个角多圆 */
 const TRAY_H = 112;
-const PLACE_W = 112;
-const SEAT_W = 0.86;
+const PLACE_W = 124;
+const SEAT_W = 0.9;
 const TRAY_R = 26;
 /** 托盘的颜色：比背景深一档的半透明；细的浅色边和分隔线 */
 const TRAY_FILL = new Color(132, 136, 176, 120);
